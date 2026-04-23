@@ -46,12 +46,6 @@ module SpecHelper
       args.each { |arg| expect(actual).to include(arg) }
     end
   end
-
-  def should_not_run_with(arg)
-    expect(ParallelSpecs::Test::Runner).to receive(:execute_command) do |actual, *_rest|
-      expect(actual).not_to include(arg)
-    end
-  end
 end
 
 module SharedExamples
@@ -120,14 +114,8 @@ RSpec.configure do |config|
       PARALLEL_PID_FILE
       PARALLEL_SPECS_DASHBOARD_EVENT_LOG
       PARALLEL_SPECS_DASHBOARD_MODE
-      PARALLEL_SPECS_EXECUTABLE
-      PARALLEL_TESTS_DASHBOARD_EVENT_LOG
-      PARALLEL_TESTS_DASHBOARD_MODE
-      PARALLEL_TESTS_EXECUTABLE
-      PARALLEL_TEST_FIRST_IS_1
       PARALLEL_TEST_GROUPS
       PARALLEL_TEST_HEARTBEAT_INTERVAL
-      PARALLEL_TEST_MULTIPLY_PROCESSES
       PARALLEL_TEST_PROCESSORS
       TEST_ENV_NUMBER
     ].each { |name| ENV.delete(name) }

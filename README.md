@@ -1,6 +1,6 @@
 # Parallel Specs
 
-A focused extraction of the `parallel_tests` RSpec runner with:
+A focused extraction of the RSpec pieces from `parallel_tests` with only the parts this gem actually needs:
 
 - a live local dashboard
 - a plain-text CI / LLM friendly summary
@@ -16,7 +16,7 @@ bundle exec parallel_specs --test-options='--tag ~type:system'
 bundle exec parallel_specs --record-runtime
 ```
 
-`parallel_specs` defaults to the dashboard locally and plain text in CI / non-TTY environments.
+Local TTY runs render the interactive dashboard. CI and other non-TTY runs automatically fall back to the plain text summary.
 
 ## Runtime balancing
 
@@ -34,6 +34,11 @@ Or point at a custom file:
 bundle exec parallel_specs --record-runtime --runtime-log tmp/my_runtime.log
 ```
 
-## Compatibility
+## Compatibility retained on purpose
 
-The gem also ships a `parallel_rspec` executable and compatibility formatter paths so existing wrapper scripts can migrate with minimal changes.
+To stay close to a drop-in replacement for existing app wrappers, the gem still ships:
+
+- `parallel_rspec` as an executable alias
+- `ParallelTests::RSpec::RuntimeLogger` as a compatibility formatter path
+
+Everything else from the broader `parallel_tests` surface area was intentionally left out.

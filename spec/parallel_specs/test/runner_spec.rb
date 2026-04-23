@@ -17,23 +17,24 @@ RSpec.describe ParallelSpecs::Test::Runner do
       end
     end
 
-    it 'sets both dashboard log env vars when dashboard output is enabled' do
-      run_with_file("puts [ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG'], ENV['PARALLEL_TESTS_DASHBOARD_EVENT_LOG']].map { |v| File.basename(v) }.join(':')") do |path|
-        result = call(['ruby', path], 1, 4, dashboard_event_files: { 1 => '/tmp/worker-2.jsonl' })
-        expect(result[:stdout].chomp).to eq('worker-2.jsonl:worker-2.jsonl')
+    it 'sets the dashboard log env var when dashboard output is enabled' do
+      run_with_file("puts File.basename(ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG'])") do |path|
+        result = call(['ruby', path], 1, 4, dashboard_event_files: { 1 => '/tmp/worker-2.jsonl' }, dashboard: true)
+        expect(result[:stdout].chomp).to eq('worker-2.jsonl')
       end
     end
 
-    it 'does not prepend the command when serializing output with a dashboard runner' do
+    it 'streams output when not using the dashboard' do
       run_with_file('puts 123') do |path|
-        result = call(['ruby', path], 1, 4, serialize_stdout: true, verbose_process_command: true, dashboard_runner: Object.new)
-        expect(result[:stdout].chomp).to eq('123')
+        expect do
+          call(['ruby', path], 1, 4, dashboard: false)
+        end.to output(/123/).to_stdout
       end
     end
 
     it 'returns signal based exit status for terminated processes', unless: Gem.win_platform? do
       run_with_file("Process.kill('KILL', Process.pid)") do |path|
-        result = call(['ruby', path], 1, 4, {})
+        result = call(['ruby', path], 1, 4, dashboard: false)
         expect(result[:exit_status]).to eq(137)
       end
     end

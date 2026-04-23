@@ -19,11 +19,6 @@ module ParallelSpecs
       save
     end
 
-    def count
-      read
-      pids.count
-    end
-
     def all
       read
       pids

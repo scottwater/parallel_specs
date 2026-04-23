@@ -8,9 +8,6 @@ RSpec.describe ParallelSpecs::RSpec::Runner do
 
   describe '.run_tests' do
     before do
-      allow(File).to receive(:file?).with('.rspec_parallel').and_return(false)
-      allow(File).to receive(:file?).with('spec/parallel_spec.opts').and_return(false)
-      allow(File).to receive(:file?).with('spec/spec.opts').and_return(false)
       allow(ParallelSpecs).to receive(:bundler_enabled?).and_return(false)
     end
 

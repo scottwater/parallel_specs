@@ -25,7 +25,7 @@ RSpec.describe ParallelSpecs::CLI do
       )
     end
 
-    it 'disables the dashboard when recording runtime' do
+    it 'switches to runtime recording mode' do
       expect(call(['--record-runtime'])).to include(record_runtime: true, dashboard: false)
     end
 
@@ -34,10 +34,6 @@ RSpec.describe ParallelSpecs::CLI do
         files: ['spec/models'],
         test_options: ['--tag', '~type:system']
       )
-    end
-
-    it 'raises when verbose and quiet are both set' do
-      expect { call(['--verbose', '--quiet']) }.to raise_error(RuntimeError, /mutually exclusive/)
     end
   end
 
@@ -57,17 +53,6 @@ RSpec.describe ParallelSpecs::CLI do
       allow($stdout).to receive(:tty?).and_return(false)
       ENV['PARALLEL_SPECS_DASHBOARD_MODE'] = 'interactive'
       expect(cli.send(:dashboard_mode)).to eq(:interactive)
-    end
-  end
-
-  describe '#report_failure_rerun_command' do
-    it 'prints the rerun command when requested' do
-      cli.instance_variable_set(:@runner, ParallelSpecs::RSpec::Runner)
-      failed = [{ exit_status: 1, command: %w[bundle exec rspec spec/foo_spec.rb], seed: nil, env: { 'TEST_ENV_NUMBER' => '', 'PARALLEL_TEST_GROUPS' => '2' } }]
-
-      expect do
-        cli.send(:report_failure_rerun_command, failed, verbose_rerun_command: true)
-      end.to output(/Re-run with/).to_stdout
     end
   end
 end

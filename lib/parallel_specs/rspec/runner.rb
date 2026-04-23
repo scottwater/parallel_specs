@@ -7,17 +7,7 @@ module ParallelSpecs
     class Runner < ParallelSpecs::Test::Runner
       class << self
         def run_tests(test_files, process_number, num_processes, options)
-          execute_command(build_command(test_files, options), process_number, num_processes, options)
-        end
-
-        def determine_executable
-          if File.exist?('bin/rspec')
-            ParallelSpecs.with_ruby_binary('bin/rspec')
-          elsif ParallelSpecs.bundler_enabled?
-            %w[bundle exec rspec]
-          else
-            ['rspec']
-          end
+          execute_command(build_test_command(test_files, options), process_number, num_processes, options)
         end
 
         def runtime_log
@@ -32,28 +22,8 @@ module ParallelSpecs
           'spec'
         end
 
-        def test_suffix
-          /(_spec\.rb|\.feature)$/
-        end
-
         def line_is_result?(line)
           line =~ /\d+ examples?, \d+ failures?/
-        end
-
-        def build_test_command(file_list, options)
-          [
-            *executable,
-            *options[:test_options],
-            *color,
-            *spec_opts,
-            *record_runtime_formatters(options),
-            *dashboard_formatter(options),
-            *file_list
-          ]
-        end
-
-        def command_with_seed(cmd, seed)
-          [*remove_command_arguments(cmd, '--seed', '--order'), '--seed', seed]
         end
 
         def summarize_results(results)
@@ -73,13 +43,29 @@ module ParallelSpecs
 
         private
 
-        def color
-          %w[--color --tty] if $stdout.tty?
+        def build_test_command(file_list, options)
+          [
+            *executable,
+            *options.fetch(:test_options, []),
+            *color,
+            *record_runtime_formatters(options),
+            *dashboard_formatter(options),
+            *file_list
+          ]
         end
 
-        def spec_opts
-          options_file = ['.rspec_parallel', 'spec/parallel_spec.opts', 'spec/spec.opts'].detect { |file| File.file?(file) }
-          ['-O', options_file] if options_file
+        def executable
+          if File.exist?('bin/rspec')
+            ParallelSpecs.with_ruby_binary('bin/rspec')
+          elsif ParallelSpecs.bundler_enabled?
+            %w[bundle exec rspec]
+          else
+            ['rspec']
+          end
+        end
+
+        def color
+          %w[--color --tty] if $stdout.tty?
         end
 
         def dashboard_formatter(options)

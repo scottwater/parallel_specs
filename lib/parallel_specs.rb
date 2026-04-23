@@ -7,7 +7,6 @@ require 'tempfile'
 module ParallelSpecs
   WINDOWS = (RbConfig::CONFIG['host_os'] =~ /cygwin|mswin|mingw|bccwin|wince|emx/)
   RUBY_BINARY = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
-  DEFAULT_MULTIPLY_PROCESSES = 1.0
 
   autoload :CLI, 'parallel_specs/cli'
   autoload :VERSION, 'parallel_specs/version'
@@ -20,14 +19,6 @@ module ParallelSpecs
         count,
         ENV['PARALLEL_TEST_PROCESSORS'],
         Parallel.processor_count
-      ].detect { |value| !value.to_s.strip.empty? })
-    end
-
-    def determine_multiple(multiple)
-      Float([
-        multiple,
-        ENV['PARALLEL_TEST_MULTIPLY_PROCESSES'],
-        DEFAULT_MULTIPLY_PROCESSES
       ].detect { |value| !value.to_s.strip.empty? })
     end
 
@@ -63,6 +54,7 @@ module ParallelSpecs
       current = File.expand_path(Dir.pwd)
       until !File.directory?(current) || current == previous
         return true if File.exist?(File.join(current, 'Gemfile'))
+
         previous = current
         current = File.expand_path('..', current)
       end

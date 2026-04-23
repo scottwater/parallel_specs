@@ -23,7 +23,7 @@ class ParallelSpecs::RSpec::DashboardLogger < RSpec::Core::Formatters::BaseTextF
   def initialize(output)
     super
 
-    path = ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG'] || ENV['PARALLEL_TESTS_DASHBOARD_EVENT_LOG']
+    path = ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG']
     raise 'A dashboard event log env var is required for DashboardLogger' if path.to_s.empty?
 
     FileUtils.mkdir_p(File.dirname(path))
