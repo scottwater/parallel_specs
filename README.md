@@ -34,11 +34,12 @@ Or point at a custom file:
 bundle exec parallel_specs --record-runtime --runtime-log tmp/my_runtime.log
 ```
 
-## Compatibility retained on purpose
+## Environment variables
 
-To stay close to a drop-in replacement for existing app wrappers, the gem still ships:
+The supported environment variables are:
 
-- `parallel_rspec` as an executable alias
-- `ParallelTests::RSpec::RuntimeLogger` as a compatibility formatter path
+- `PARALLEL_SPECS_PROCESSORS`
+- `PARALLEL_SPECS_DASHBOARD_MODE`
+- `PARALLEL_SPECS_HEARTBEAT_INTERVAL`
 
-Everything else from the broader `parallel_tests` surface area was intentionally left out.
+This gem does not intentionally preserve the old `parallel_tests` executable names, formatter paths, or environment variable aliases.

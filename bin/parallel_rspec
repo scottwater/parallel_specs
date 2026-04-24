@@ -1,9 +1,0 @@
-#!/usr/bin/env ruby
-# frozen_string_literal: true
-
-root = File.expand_path('..', __dir__)
-$LOAD_PATH.unshift("#{root}/lib") if File.exist?("#{root}/parallel_specs.gemspec")
-
-require 'parallel_specs'
-
-ParallelSpecs::CLI.new.run(ARGV)

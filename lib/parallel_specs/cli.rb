@@ -240,7 +240,7 @@ module ParallelSpecs
     def simulate_output_for_ci(simulate)
       if simulate
         progress_indicator = Thread.new do
-          interval = Float(ENV['PARALLEL_TEST_HEARTBEAT_INTERVAL'] || 60)
+          interval = Float(ENV['PARALLEL_SPECS_HEARTBEAT_INTERVAL'] || 60)
           loop do
             sleep interval
             print '.'

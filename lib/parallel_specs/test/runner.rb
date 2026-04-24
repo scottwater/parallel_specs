@@ -49,8 +49,8 @@ module ParallelSpecs
         def execute_command(cmd, process_number, num_processes, options)
           env = {
             'TEST_ENV_NUMBER' => test_env_number(process_number),
-            'PARALLEL_TEST_GROUPS' => num_processes.to_s,
-            'PARALLEL_PID_FILE' => ParallelSpecs.pid_file_path
+            'PARALLEL_SPECS_GROUPS' => num_processes.to_s,
+            'PARALLEL_SPECS_PID_FILE' => ParallelSpecs.pid_file_path
           }
 
           if (dashboard_event_files = options[:dashboard_event_files])

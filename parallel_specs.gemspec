@@ -11,7 +11,7 @@ Gem::Specification.new name, ParallelSpecs::VERSION do |s|
   s.required_ruby_version = '>= 3.2.0'
   s.files = Dir['{lib,bin}/**/*'] + ['README.md']
   s.bindir = 'bin'
-  s.executables = ['parallel_specs', 'parallel_rspec']
+  s.executables = ['parallel_specs']
 
   s.add_dependency 'parallel'
   s.add_dependency 'rspec-core'

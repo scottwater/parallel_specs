@@ -17,18 +17,18 @@ module ParallelSpecs
     def determine_number_of_processes(count)
       Integer([
         count,
-        ENV['PARALLEL_TEST_PROCESSORS'],
+        ENV['PARALLEL_SPECS_PROCESSORS'],
         Parallel.processor_count
       ].detect { |value| !value.to_s.strip.empty? })
     end
 
     def with_pid_file
       Tempfile.open('parallel_specs-pidfile') do |file|
-        ENV['PARALLEL_PID_FILE'] = file.path
+        ENV['PARALLEL_SPECS_PID_FILE'] = file.path
         @pids = pids
         yield
       ensure
-        ENV['PARALLEL_PID_FILE'] = nil
+        ENV['PARALLEL_SPECS_PID_FILE'] = nil
         @pids = nil
       end
     end
@@ -38,7 +38,7 @@ module ParallelSpecs
     end
 
     def pid_file_path
-      ENV.fetch('PARALLEL_PID_FILE')
+      ENV.fetch('PARALLEL_SPECS_PID_FILE')
     end
 
     def stop_all_processes

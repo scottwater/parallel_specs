@@ -45,7 +45,7 @@ RSpec.describe 'parallel_specs integration' do
       write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { sleep 0.25; expect(true).to eq(true) } }")
       write(dir, 'spec/b_spec.rb', "RSpec.describe { it('passes') { sleep 0.35; expect(true).to eq(true) } }")
 
-      output, status = run_specs(dir, '-n', '2', 'spec', env: { 'PARALLEL_TEST_HEARTBEAT_INTERVAL' => '0.05' })
+      output, status = run_specs(dir, '-n', '2', 'spec', env: { 'PARALLEL_SPECS_HEARTBEAT_INTERVAL' => '0.05' })
       expect(status.exitstatus).to eq(0), output
       expect(output).to match(/\.{3,}.*dashboard workers=2/m)
     end
