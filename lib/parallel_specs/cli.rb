@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'optparse'
+require 'fileutils'
 require 'pathname'
 require 'shellwords'
 require 'tmpdir'
@@ -22,6 +23,8 @@ module ParallelSpecs
       ENV['DISABLE_SPRING'] ||= '1'
 
       num_processes = ParallelSpecs.determine_number_of_processes(options[:count])
+      abort 'Process count must be greater than 0' unless num_processes.positive?
+
       run_tests_in_parallel(num_processes, options)
     end
 
@@ -47,20 +50,22 @@ module ParallelSpecs
         groups = @runner.tests_in_groups(options[:files], num_processes, options)
         groups.reject!(&:empty?)
 
-        with_dashboard(groups, options) do |dashboard|
-          report_number_of_tests(groups) unless dashboard
+        with_runtime_log_files(groups, options) do
+          with_dashboard(groups, options) do |dashboard|
+            report_number_of_tests(groups) unless dashboard
 
-          dashboard&.start
-          begin
-            test_results = execute_in_parallel(groups, groups.size, options) do |group, index|
-              @runner.run_tests(group, index, num_processes, options)
+            dashboard&.start
+            begin
+              test_results = execute_in_parallel(groups, groups.size, options) do |group, index|
+                @runner.run_tests(group, index, num_processes, options)
+              end
+            ensure
+              dashboard&.stop
             end
-          ensure
-            dashboard&.stop
-          end
 
-          report_results(test_results)
-          report_dashboard_failures(test_results) if dashboard
+            report_results(test_results)
+            report_dashboard_failures(test_results) if dashboard
+          end
         end
       end
 
@@ -80,6 +85,35 @@ module ParallelSpecs
             options[:dashboard_runner]&.worker_finished(index, exit_status: result[:exit_status])
             result
           end
+        end
+      end
+    end
+
+    def with_runtime_log_files(groups, options)
+      return yield unless options[:record_runtime]
+
+      runtime_log = options[:runtime_log] || @runner.runtime_log
+
+      Dir.mktmpdir('parallel_specs-runtime') do |dir|
+        runtime_log_files = groups.each_index.to_h do |index|
+          [index, File.join(dir, "worker-#{index + 1}.log")]
+        end
+
+        options[:runtime_log_files] = runtime_log_files
+        yield
+      ensure
+        merge_runtime_logs(runtime_log_files, runtime_log) if runtime_log_files
+        options.delete(:runtime_log_files)
+      end
+    end
+
+    def merge_runtime_logs(runtime_log_files, runtime_log)
+      FileUtils.mkdir_p(File.dirname(runtime_log))
+      File.open(runtime_log, 'w') do |output|
+        runtime_log_files.each_value do |path|
+          next unless File.exist?(path)
+
+          File.foreach(path) { |line| output.write(line) }
         end
       end
     end
@@ -238,20 +272,20 @@ module ParallelSpecs
     end
 
     def simulate_output_for_ci(simulate)
-      if simulate
-        progress_indicator = Thread.new do
-          interval = Float(ENV['PARALLEL_SPECS_HEARTBEAT_INTERVAL'] || 60)
-          loop do
-            sleep interval
-            print '.'
-          end
+      return yield unless simulate
+
+      progress_indicator = Thread.new do
+        interval = Float(ENV['PARALLEL_SPECS_HEARTBEAT_INTERVAL'] || 60)
+        loop do
+          sleep interval
+          $stdout.print '.'
+          $stdout.flush
         end
-        result = yield
-        progress_indicator.exit
-        result
-      else
-        yield
       end
+
+      yield
+    ensure
+      progress_indicator&.exit
     end
 
     def heredoc(text, newline_padding)
