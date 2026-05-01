@@ -39,7 +39,15 @@ module ParallelSpecs
         case interrupt_action
         when :stop_workers
           Kernel.exit unless ParallelSpecs.stop_all_processes
+        when :wait_for_process_group_interrupt
+          # Terminal Ctrl-C is delivered to the whole foreground process group.
+          # In that case workers have already seen SIGINT, so avoid sending a
+          # second signal that could escalate RSpec from graceful shutdown to
+          # immediate termination.
+          nil
         when :exit
+          Kernel.exit
+        else
           Kernel.exit
         end
       end
@@ -47,47 +55,62 @@ module ParallelSpecs
 
     def interrupt_action
       return :exit unless ParallelSpecs.pid_file_available?
+      tracked_pids = ParallelSpecs.pids.all
+      return :exit if tracked_pids.empty?
       return :stop_workers if Gem.win_platform?
 
-      child_pid = ParallelSpecs.pids.all.first
-      return :exit unless child_pid
+      child_pid = tracked_pids.first
+      child_process_group = Process.getpgid(child_pid)
+      return :stop_workers unless child_process_group == Process.getpgrp
 
-      Process.getpgid(child_pid) == Process.getpgrp ? :wait_for_process_group_interrupt : :stop_workers
+      terminal_signal_reaches_process_group? ? :wait_for_process_group_interrupt : :stop_workers
     rescue Errno::ESRCH, Errno::EPERM
       :stop_workers
     rescue KeyError
       :exit
     end
 
+    def terminal_signal_reaches_process_group?
+      $stdout.tty?
+    end
+
     def run_tests_in_parallel(num_processes, options)
       test_results = nil
+      @runtime_log_merge_failed = false
 
       runner = lambda do
         groups = @runner.tests_in_groups(options[:files], num_processes, options)
         groups.reject!(&:empty?)
 
         with_runtime_log_files(groups, options) do
-          with_dashboard(groups, options) do |dashboard|
-            report_number_of_tests(groups) unless dashboard
-
-            dashboard&.start
-            begin
-              test_results = execute_in_parallel(groups, groups.size, options) do |group, index|
-                @runner.run_tests(group, index, num_processes, options)
-              end
-            ensure
-              dashboard&.stop
-            end
-
+          if groups.empty?
+            report_number_of_tests(groups)
+            test_results = []
             report_results(test_results)
-            report_dashboard_failures(test_results) if dashboard
-            runtime_log_mergeable?(test_results)
+            false
+          else
+            with_dashboard(groups, options) do |dashboard|
+              report_number_of_tests(groups) unless dashboard
+
+              dashboard&.start
+              begin
+                test_results = execute_in_parallel(groups, groups.size, options) do |group, index|
+                  @runner.run_tests(group, index, num_processes, options)
+                end
+              ensure
+                dashboard&.stop
+              end
+
+              report_results(test_results)
+              report_dashboard_failures(test_results) if dashboard
+              runtime_log_mergeable?(test_results)
+            end
           end
         end
       end
 
       report_time_taken(&runner)
-      if any_test_failed?(test_results)
+      if any_test_failed?(test_results) || @runtime_log_merge_failed || @graceful_shutdown_attempted
         warn final_fail_message
         exit 1
       end
@@ -121,7 +144,7 @@ module ParallelSpecs
         should_merge_runtime_logs = yield
       ensure
         if runtime_log_files && should_merge_runtime_logs
-          merge_runtime_logs(runtime_log_files, runtime_log)
+          @runtime_log_merge_failed = true unless merge_runtime_logs(runtime_log_files, runtime_log)
         elsif runtime_log_files
           warn "parallel_specs: not updating runtime log #{runtime_log}; run did not complete successfully"
         end
@@ -130,6 +153,11 @@ module ParallelSpecs
     end
 
     def merge_runtime_logs(runtime_log_files, runtime_log)
+      if runtime_log_files.empty?
+        warn "parallel_specs: not updating runtime log #{runtime_log}; no worker runtime logs were produced"
+        return false
+      end
+
       missing_logs = runtime_log_files.values.reject { |path| File.file?(path) }
       unless missing_logs.empty?
         warn "parallel_specs: not updating runtime log #{runtime_log}; missing worker runtime logs: #{missing_logs.join(', ')}"
@@ -205,7 +233,7 @@ module ParallelSpecs
     end
 
     def runtime_log_mergeable?(test_results)
-      test_results && test_results.all? { |result| result[:exit_status].zero? }
+      !@graceful_shutdown_attempted && test_results && !test_results.empty? && test_results.all? { |result| result[:exit_status].zero? }
     end
 
     def parse_options!(argv)
@@ -234,10 +262,10 @@ module ParallelSpecs
           runtime - info from runtime log
           default - runtime when runtime log is filled otherwise filesize
         TEXT
-        opts.on('--runtime-log PATH', 'Location of previously recorded spec runtimes') { |path| options[:runtime_log] = path }
+        opts.on('--runtime-log PATH', 'Read spec runtimes from PATH; with --record-runtime, write the completed run there') { |path| options[:runtime_log] = path }
         opts.on('--allowed-missing COUNT', Integer, 'Allowed percentage of missing runtimes (default = 50)') { |percent| options[:allowed_missing_percent] = percent }
         opts.on('--unknown-runtime SECONDS', Float, 'Use given number as unknown runtime (otherwise use average time)') { |time| options[:unknown_runtime] = time }
-        opts.on('--record-runtime', 'Run with the runtime logger and write tmp/parallel_runtime_rspec.log') { options[:record_runtime] = true }
+        opts.on('--record-runtime', 'Record runtimes and replace the runtime log only after a successful complete run') { options[:record_runtime] = true }
         opts.on('-v', '--version', 'Show version') { puts ParallelSpecs::VERSION; exit 0 }
         opts.on('-h', '--help', 'Show this help') { puts opts; exit 0 }
       end.parse!(argv)

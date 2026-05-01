@@ -17,6 +17,19 @@ RSpec.describe ParallelSpecs::Test::Runner do
       end
     end
 
+    it 'sets worker environment variables' do
+      run_with_file(<<~RUBY) do |path|
+        puts [
+          ENV['TEST_ENV_NUMBER'],
+          ENV['PARALLEL_SPECS_GROUPS'],
+          File.exist?(ENV['PARALLEL_SPECS_PID_FILE']).to_s
+        ].join(',')
+      RUBY
+        result = call(['ruby', path], 1, 4, dashboard: false)
+        expect(result[:stdout].chomp).to eq('2,4,true')
+      end
+    end
+
     it 'sets the dashboard log env var when dashboard output is enabled' do
       run_with_file("puts File.basename(ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG'])") do |path|
         result = call(['ruby', path], 1, 4, dashboard_event_files: { 1 => '/tmp/worker-2.jsonl' }, dashboard: true)
@@ -36,6 +49,19 @@ RSpec.describe ParallelSpecs::Test::Runner do
       run_with_file("Process.kill('KILL', Process.pid)") do |path|
         result = call(['ruby', path], 1, 4, dashboard: false)
         expect(result[:exit_status]).to eq(137)
+      end
+    end
+
+    it 'removes worker pids when output capture raises' do
+      run_with_file('puts 123') do |path|
+        allow(described_class).to receive(:capture_output).and_raise('capture failed')
+
+        ParallelSpecs.with_pid_file do
+          expect do
+            described_class.execute_command(['ruby', path], 1, 4, dashboard: false)
+          end.to raise_error(RuntimeError, 'capture failed')
+          expect(ParallelSpecs.pids.all).to be_empty
+        end
       end
     end
   end

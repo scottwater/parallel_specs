@@ -60,13 +60,18 @@ module ParallelSpecs
         @refresh_thread = Thread.new do
           Thread.current.report_on_exception = false if Thread.current.respond_to?(:report_on_exception=)
 
-          while @running
-            sleep @refresh_interval
-            @mutex.synchronize do
-              poll_once
-              @spinner_index += 1
-              render if @dirty
+          begin
+            while @running
+              sleep @refresh_interval
+              @mutex.synchronize do
+                poll_once
+                @spinner_index += 1
+                render if @dirty
+              end
             end
+          rescue StandardError => e
+            @running = false
+            warn "parallel_specs: dashboard refresh failed while polling #{event_file_context}: #{e.class}: #{e.message}"
           end
         end
       end
@@ -76,7 +81,11 @@ module ParallelSpecs
         @refresh_thread&.join
 
         @mutex.synchronize do
-          poll_once
+          begin
+            poll_once
+          rescue StandardError => e
+            warn "parallel_specs: dashboard final poll failed while polling #{event_file_context}: #{e.class}: #{e.message}"
+          end
           render
           @output.puts if interactive?
           @output.flush if @output.respond_to?(:flush)
@@ -160,6 +169,10 @@ module ParallelSpecs
 
       def synchronize(&block)
         @mutex.synchronize(&block)
+      end
+
+      def event_file_context
+        @event_files.map { |process_number, path| "worker #{process_number + 1}=#{path}" }.join(', ')
       end
 
       def render

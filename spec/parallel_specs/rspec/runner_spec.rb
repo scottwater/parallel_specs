@@ -10,6 +10,41 @@ end
 RSpec.describe ParallelSpecs::RSpec::Runner do
   test_tests_in_groups(described_class, '_spec.rb')
 
+  describe '.tests_in_groups' do
+    around { |example| use_temporary_directory(&example) }
+
+    it 'warns and falls back when a custom default runtime log is missing' do
+      FileUtils.mkdir_p('spec')
+      File.write('spec/a_spec.rb', 'x')
+
+      expect do
+        groups = described_class.tests_in_groups(['spec'], 1, runtime_log: 'missing.log')
+        expect(groups).to eq([['spec/a_spec.rb']])
+      end.to output(/runtime log missing\.log was not found; falling back to filesize grouping/).to_stderr
+    end
+
+    it 'warns and falls back when the default runtime log is malformed' do
+      FileUtils.mkdir_p('spec')
+      File.write('spec/a_spec.rb', 'x')
+      File.write('runtime.log', "spec/a_spec.rb:not-a-number\n")
+
+      expect do
+        groups = described_class.tests_in_groups(['spec'], 1, runtime_log: 'runtime.log')
+        expect(groups).to eq([['spec/a_spec.rb']])
+      end.to output(/unable to use runtime log runtime\.log: Invalid runtime value.*falling back to filesize grouping/).to_stderr
+    end
+
+    it 'raises on malformed runtime values when runtime grouping is explicit' do
+      FileUtils.mkdir_p('spec')
+      File.write('spec/a_spec.rb', 'x')
+      File.write('runtime.log', "spec/a_spec.rb:not-a-number\n")
+
+      expect do
+        described_class.tests_in_groups(['spec'], 1, runtime_log: 'runtime.log', group_by: :runtime)
+      end.to raise_error(ParallelSpecs::Test::Runner::RuntimeLogParseError, /Invalid runtime value/)
+    end
+  end
+
   describe '.run_tests' do
     before do
       allow(ParallelSpecs).to receive(:bundler_enabled?).and_return(false)

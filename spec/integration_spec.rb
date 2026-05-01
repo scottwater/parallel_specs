@@ -60,6 +60,31 @@ RSpec.describe 'parallel_specs integration' do
     end
   end
 
+  it 'prints failed worker output in default plain dashboard mode' do
+    Dir.mktmpdir do |dir|
+      write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
+      write(dir, 'spec/b_spec.rb', "RSpec.describe { it('fails with useful details') { expect(false).to eq(true) } }")
+
+      output, status = run_specs(dir, '-n', '2', 'spec')
+      expect(status.exitstatus).to eq(1), output
+      expect(output).to include('Failed worker output:')
+      expect(output).to include('fails with useful details')
+      expect(output).to include('expected: true')
+      expect(output).to include('Specs Failed')
+    end
+  end
+
+  it 'uses PARALLEL_SPECS_PROCESSORS for the worker count' do
+    Dir.mktmpdir do |dir|
+      write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
+      write(dir, 'spec/b_spec.rb', "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
+
+      output, status = run_specs(dir, 'spec', env: { 'PARALLEL_SPECS_PROCESSORS' => '2' })
+      expect(status.exitstatus).to eq(0), output
+      expect(output).to match(/^dashboard workers=2.*$/)
+    end
+  end
+
   it 'keeps heartbeat output in plain dashboard mode' do
     Dir.mktmpdir do |dir|
       write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { sleep 0.25; expect(true).to eq(true) } }")
@@ -113,18 +138,59 @@ RSpec.describe 'parallel_specs integration' do
     end
   end
 
+  it 'does not overwrite an existing runtime log when recording finds no specs' do
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'tmp'))
+      runtime_log = File.join(dir, 'tmp/custom_runtime.log')
+      File.write(runtime_log, "spec/old_spec.rb:1.0\n")
+      FileUtils.mkdir_p(File.join(dir, 'spec'))
+
+      output, status = run_specs(dir, '--record-runtime', '--runtime-log', 'tmp/custom_runtime.log', '-n', '2', 'spec')
+      expect(status.exitstatus).to eq(0), output
+      expect(output).to include('not updating runtime log tmp/custom_runtime.log; run did not complete successfully')
+      expect(File.read(runtime_log)).to eq("spec/old_spec.rb:1.0\n")
+    end
+  end
+
+  it 'does not overwrite an existing runtime log when recording is interrupted', unless: Gem.win_platform? do
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'tmp'))
+      runtime_log = File.join(dir, 'tmp/custom_runtime.log')
+      File.write(runtime_log, "spec/old_spec.rb:1.0\n")
+      ready_file = File.join(dir, 'tmp/slow-spec-started')
+      write(dir, 'spec/a_spec.rb', "RSpec.describe { it('runs slowly') { File.write(#{ready_file.inspect}, 'ready'); sleep 2; expect(true).to eq(true) } }")
+
+      output = +''
+      status = nil
+      Dir.chdir(dir) do
+        IO.popen([*executable, '--record-runtime', '--runtime-log', 'tmp/custom_runtime.log', '-n', '1', 'spec'], err: [:child, :out]) do |io|
+          Timeout.timeout(5) do
+            sleep 0.01 until File.exist?(ready_file)
+          end
+          Process.kill('INT', io.pid)
+          output << io.read.to_s
+        end
+        status = $?
+      end
+
+      expect(status.exitstatus).not_to eq(0), output
+      expect(output).to include('not updating runtime log tmp/custom_runtime.log; run did not complete successfully')
+      expect(File.read(runtime_log)).to eq("spec/old_spec.rb:1.0\n")
+    end
+  end
+
   it 'does not overwrite an existing runtime log when recording specs fail' do
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, 'tmp'))
       runtime_log = File.join(dir, 'tmp/custom_runtime.log')
-      File.write(runtime_log, "known-good\n")
+      File.write(runtime_log, "spec/old_spec.rb:1.0\n")
       write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
       write(dir, 'spec/b_spec.rb', "RSpec.describe { it('fails') { expect(false).to eq(true) } }")
 
       output, status = run_specs(dir, '--record-runtime', '--runtime-log', 'tmp/custom_runtime.log', '-n', '2', 'spec')
       expect(status.exitstatus).to eq(1), output
       expect(output).to include('not updating runtime log tmp/custom_runtime.log; run did not complete successfully')
-      expect(File.read(runtime_log)).to eq("known-good\n")
+      expect(File.read(runtime_log)).to eq("spec/old_spec.rb:1.0\n")
     end
   end
 

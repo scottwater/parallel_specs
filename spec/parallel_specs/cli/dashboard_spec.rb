@@ -56,6 +56,38 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
     expect(frame).to include('[ 2] · queued')
   end
 
+  it 'warns when final polling fails during stop' do
+    allow(dashboard).to receive(:poll_once).and_raise(StandardError, 'final poll failed')
+
+    original_stderr = $stderr
+    captured_stderr = StringIO.new
+    $stderr = captured_stderr
+    begin
+      expect { dashboard.stop }.not_to raise_error
+    ensure
+      $stderr = original_stderr
+    end
+
+    expect(captured_stderr.string).to match(/dashboard final poll failed while polling worker 1=.*final poll failed/)
+  end
+
+  it 'warns when the refresh thread fails' do
+    allow(dashboard).to receive(:poll_once).and_raise(StandardError, 'bad json')
+
+    original_stderr = $stderr
+    captured_stderr = StringIO.new
+    $stderr = captured_stderr
+    begin
+      dashboard.start
+      sleep 0.03
+      dashboard.stop
+    ensure
+      $stderr = original_stderr
+    end
+
+    expect(captured_stderr.string).to match(/dashboard refresh failed while polling worker 1=.*bad json/)
+  end
+
   it 'polls jsonl event files' do
     File.write(event_file_1, <<~JSONL)
       {"event":"start","total":2}

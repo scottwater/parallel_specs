@@ -49,12 +49,17 @@ module ParallelSpecs
     def stop_all_processes
       return false unless pid_file_available?
 
-      pids.all.each do |pid|
+      tracked_pids = pids.all
+      return false if tracked_pids.empty?
+
+      signal_delivered = false
+      tracked_pids.each do |pid|
         Process.kill(:INT, pid)
+        signal_delivered = true
       rescue Errno::ESRCH, Errno::EPERM => e
         warn "parallel_specs: unable to interrupt worker pid #{pid}: #{e.class}: #{e.message}"
       end
-      true
+      signal_delivered
     end
 
     def bundler_enabled?

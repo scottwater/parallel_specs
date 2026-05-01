@@ -6,6 +6,7 @@ module ParallelSpecs
   module Test
     class Runner
       RuntimeLogTooSmallError = Class.new(StandardError)
+      RuntimeLogParseError = Class.new(StandardError)
 
       class << self
         def tests_in_groups(tests, num_groups, options = {})
@@ -29,8 +30,15 @@ module ParallelSpecs
           when nil
             begin
               known_runtimes = runtimes(tests, options)
-            rescue StandardError
+            rescue Errno::ENOENT
+              warn "parallel_specs: runtime log #{runtime_log_path(options)} was not found; falling back to filesize grouping" if options[:runtime_log]
               known_runtimes = {}
+            rescue RuntimeLogParseError => e
+              warn "parallel_specs: unable to use runtime log #{runtime_log_path(options)}: #{e.message}; falling back to filesize grouping"
+              known_runtimes = {}
+            rescue StandardError => e
+              warn "parallel_specs: unable to load runtime log #{runtime_log_path(options)}: #{e.class}: #{e.message}"
+              raise
             end
 
             if known_runtimes.size * 1.5 > tests.size
@@ -66,8 +74,9 @@ module ParallelSpecs
             pid = io.pid
             ParallelSpecs.pids.add(pid)
             capture_output(io, options[:dashboard])
+          ensure
+            ParallelSpecs.pids.delete(pid) if pid
           end
-          ParallelSpecs.pids.delete(pid) if pid
 
           status = $?
           exit_status = if status.exitstatus
@@ -129,10 +138,21 @@ module ParallelSpecs
         end
 
         def runtimes(tests, options)
-          File.read(options[:runtime_log] || runtime_log).split("\n").each_with_object({}) do |line, times|
-            test, _, time = line.rpartition(':')
-            times[test] = time.to_f if test && time && tests.include?(test)
+          path = runtime_log_path(options)
+          File.read(path).split("\n").each_with_index.each_with_object({}) do |(line, index), times|
+            next if line.empty?
+
+            test, separator, time = line.rpartition(':')
+            raise RuntimeLogParseError, "Invalid runtime log line #{index + 1} in #{path}: #{line.inspect}" if separator.empty? || test.empty? || time.empty?
+
+            times[test] = Float(time) if tests.include?(test)
+          rescue ArgumentError
+            raise RuntimeLogParseError, "Invalid runtime value on line #{index + 1} in #{path}: #{line.inspect}"
           end
+        end
+
+        def runtime_log_path(options)
+          options[:runtime_log] || runtime_log
         end
 
         def sort_by_filesize(tests)
