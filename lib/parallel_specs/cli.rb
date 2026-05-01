@@ -34,13 +34,29 @@ module ParallelSpecs
       @graceful_shutdown_attempted ||= false
       Kernel.exit if @graceful_shutdown_attempted
 
+      @graceful_shutdown_attempted = true
       Thread.new do
-        if Gem.win_platform? || ((child_pid = ParallelSpecs.pids.all.first) && Process.getpgid(child_pid) != Process.pid)
-          ParallelSpecs.stop_all_processes
+        case interrupt_action
+        when :stop_workers
+          Kernel.exit unless ParallelSpecs.stop_all_processes
+        when :exit
+          Kernel.exit
         end
       end
+    end
 
-      @graceful_shutdown_attempted = true
+    def interrupt_action
+      return :exit unless ParallelSpecs.pid_file_available?
+      return :stop_workers if Gem.win_platform?
+
+      child_pid = ParallelSpecs.pids.all.first
+      return :exit unless child_pid
+
+      Process.getpgid(child_pid) == Process.getpgrp ? :wait_for_process_group_interrupt : :stop_workers
+    rescue Errno::ESRCH, Errno::EPERM
+      :stop_workers
+    rescue KeyError
+      :exit
     end
 
     def run_tests_in_parallel(num_processes, options)
@@ -65,6 +81,7 @@ module ParallelSpecs
 
             report_results(test_results)
             report_dashboard_failures(test_results) if dashboard
+            runtime_log_mergeable?(test_results)
           end
         end
       end
@@ -93,6 +110,7 @@ module ParallelSpecs
       return yield unless options[:record_runtime]
 
       runtime_log = options[:runtime_log] || @runner.runtime_log
+      should_merge_runtime_logs = false
 
       Dir.mktmpdir('parallel_specs-runtime') do |dir|
         runtime_log_files = groups.each_index.to_h do |index|
@@ -100,22 +118,35 @@ module ParallelSpecs
         end
 
         options[:runtime_log_files] = runtime_log_files
-        yield
+        should_merge_runtime_logs = yield
       ensure
-        merge_runtime_logs(runtime_log_files, runtime_log) if runtime_log_files
+        if runtime_log_files && should_merge_runtime_logs
+          merge_runtime_logs(runtime_log_files, runtime_log)
+        elsif runtime_log_files
+          warn "parallel_specs: not updating runtime log #{runtime_log}; run did not complete successfully"
+        end
         options.delete(:runtime_log_files)
       end
     end
 
     def merge_runtime_logs(runtime_log_files, runtime_log)
-      FileUtils.mkdir_p(File.dirname(runtime_log))
-      File.open(runtime_log, 'w') do |output|
-        runtime_log_files.each_value do |path|
-          next unless File.exist?(path)
+      missing_logs = runtime_log_files.values.reject { |path| File.file?(path) }
+      unless missing_logs.empty?
+        warn "parallel_specs: not updating runtime log #{runtime_log}; missing worker runtime logs: #{missing_logs.join(', ')}"
+        return false
+      end
 
+      FileUtils.mkdir_p(File.dirname(runtime_log))
+      temporary_runtime_log = "#{runtime_log}.#{Process.pid}.tmp"
+      File.open(temporary_runtime_log, 'w') do |output|
+        runtime_log_files.each_value do |path|
           File.foreach(path) { |line| output.write(line) }
         end
       end
+      FileUtils.mv(temporary_runtime_log, runtime_log)
+      true
+    ensure
+      FileUtils.rm_f(temporary_runtime_log) if temporary_runtime_log && File.exist?(temporary_runtime_log)
     end
 
     def with_dashboard(groups, options)
@@ -171,6 +202,10 @@ module ParallelSpecs
 
     def any_test_failed?(test_results)
       test_results.any? { |result| !result[:exit_status].zero? }
+    end
+
+    def runtime_log_mergeable?(test_results)
+      test_results && test_results.all? { |result| result[:exit_status].zero? }
     end
 
     def parse_options!(argv)

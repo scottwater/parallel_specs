@@ -23,12 +23,13 @@ module ParallelSpecs
     end
 
     def with_pid_file
+      previous_pid_file = ENV['PARALLEL_SPECS_PID_FILE']
       Tempfile.open('parallel_specs-pidfile') do |file|
         ENV['PARALLEL_SPECS_PID_FILE'] = file.path
         @pids = pids
         yield
       ensure
-        ENV['PARALLEL_SPECS_PID_FILE'] = nil
+        ENV['PARALLEL_SPECS_PID_FILE'] = previous_pid_file
         @pids = nil
       end
     end
@@ -37,14 +38,23 @@ module ParallelSpecs
       @pids ||= Pids.new(pid_file_path)
     end
 
+    def pid_file_available?
+      !ENV['PARALLEL_SPECS_PID_FILE'].to_s.empty?
+    end
+
     def pid_file_path
       ENV.fetch('PARALLEL_SPECS_PID_FILE')
     end
 
     def stop_all_processes
-      pids.all.each { |pid| Process.kill(:INT, pid) }
-    rescue Errno::ESRCH, Errno::EPERM
-      nil
+      return false unless pid_file_available?
+
+      pids.all.each do |pid|
+        Process.kill(:INT, pid)
+      rescue Errno::ESRCH, Errno::EPERM => e
+        warn "parallel_specs: unable to interrupt worker pid #{pid}: #{e.class}: #{e.message}"
+      end
+      true
     end
 
     def bundler_enabled?

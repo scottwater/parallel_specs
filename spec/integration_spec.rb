@@ -88,7 +88,7 @@ RSpec.describe 'parallel_specs integration' do
     end
   end
 
-  it 'records runtime information with --record-runtime' do
+  it 'records runtime information with --record-runtime and a custom runtime log' do
     Dir.mktmpdir do |dir|
       lib_path = File.join(root, 'lib')
       write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { sleep 0.05; expect(true).to eq(true) } }")
@@ -102,14 +102,29 @@ RSpec.describe 'parallel_specs integration' do
       RUBY
       make_executable(dir, 'bin/rspec')
 
-      output, status = run_specs(dir, '--record-runtime', '-n', '2', 'spec')
+      output, status = run_specs(dir, '--record-runtime', '--runtime-log', 'tmp/custom_runtime.log', '-n', '2', 'spec')
       expect(status.exitstatus).to eq(0), output
-      runtime_log = File.join(dir, 'tmp/parallel_runtime_rspec.log')
+      runtime_log = File.join(dir, 'tmp/custom_runtime.log')
       expect(File).to exist(runtime_log)
       lines = File.readlines(runtime_log)
       runtime_log_paths = lines.map { |line| line.split(':').first }.sort
       expect(runtime_log_paths).to eq(%w[spec/a_spec.rb spec/b_spec.rb])
       expect(lines).to all(match(%r{^spec/.+_spec.rb:[-.\de]+$}))
+    end
+  end
+
+  it 'does not overwrite an existing runtime log when recording specs fail' do
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, 'tmp'))
+      runtime_log = File.join(dir, 'tmp/custom_runtime.log')
+      File.write(runtime_log, "known-good\n")
+      write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
+      write(dir, 'spec/b_spec.rb', "RSpec.describe { it('fails') { expect(false).to eq(true) } }")
+
+      output, status = run_specs(dir, '--record-runtime', '--runtime-log', 'tmp/custom_runtime.log', '-n', '2', 'spec')
+      expect(status.exitstatus).to eq(1), output
+      expect(output).to include('not updating runtime log tmp/custom_runtime.log; run did not complete successfully')
+      expect(File.read(runtime_log)).to eq("known-good\n")
     end
   end
 

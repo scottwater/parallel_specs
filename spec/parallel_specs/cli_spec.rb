@@ -37,6 +37,58 @@ RSpec.describe ParallelSpecs::CLI do
     end
   end
 
+  describe '#handle_interrupt' do
+    it 'exits when interrupted before workers have a pid file' do
+      allow(Thread).to receive(:new).and_yield
+      expect(Kernel).to receive(:exit)
+
+      cli.send(:handle_interrupt)
+    end
+  end
+
+  describe '#with_runtime_log_files' do
+    around { |example| use_temporary_directory(&example) }
+
+    it 'does not replace an existing runtime log when the run fails' do
+      File.write('runtime.log', "known-good\n")
+      options = { record_runtime: true, runtime_log: 'runtime.log' }
+
+      expect do
+        cli.send(:with_runtime_log_files, [%w[spec/a_spec.rb]], options) do
+          File.write(options[:runtime_log_files].fetch(0), "partial\n")
+          false
+        end
+      end.to output(/not updating runtime log runtime\.log; run did not complete successfully/).to_stderr
+
+      expect(File.read('runtime.log')).to eq("known-good\n")
+    end
+  end
+
+  describe '#merge_runtime_logs' do
+    around { |example| use_temporary_directory(&example) }
+
+    it 'does not replace the runtime log when an expected worker log is missing' do
+      File.write('runtime.log', "known-good\n")
+
+      expect do
+        expect(cli.send(:merge_runtime_logs, { 0 => 'missing-worker.log' }, 'runtime.log')).to be(false)
+      end.to output(/missing worker runtime logs: missing-worker\.log/).to_stderr
+
+      expect(File.read('runtime.log')).to eq("known-good\n")
+    end
+
+    it 'atomically replaces the runtime log after all expected worker logs exist' do
+      FileUtils.mkdir_p('workers')
+      File.write('workers/one.log', "spec/a_spec.rb:1.0\n")
+      File.write('workers/two.log', "spec/b_spec.rb:2.0\n")
+
+      expect(cli.send(:merge_runtime_logs, { 0 => 'workers/one.log', 1 => 'workers/two.log' }, 'tmp/runtime.log')).to be(true)
+
+      expect(File.read('tmp/runtime.log')).to eq("spec/a_spec.rb:1.0\nspec/b_spec.rb:2.0\n")
+      expect(Dir['tmp/runtime.log.*.tmp']).to be_empty
+    end
+  end
+
   describe '#dashboard_mode' do
     it 'uses interactive mode on a tty by default' do
       allow($stdout).to receive(:tty?).and_return(true)

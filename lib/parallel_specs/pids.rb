@@ -10,18 +10,26 @@ module ParallelSpecs
     end
 
     def add(pid)
-      pids << pid.to_i
-      save
+      mutex.synchronize do
+        read
+        pids << pid.to_i
+        save
+      end
     end
 
     def delete(pid)
-      pids.delete(pid.to_i)
-      save
+      mutex.synchronize do
+        read
+        pids.delete(pid.to_i)
+        save
+      end
     end
 
     def all
-      read
-      pids
+      mutex.synchronize do
+        read
+        pids.dup
+      end
     end
 
     private
@@ -33,18 +41,17 @@ module ParallelSpecs
     end
 
     def read
-      mutex.synchronize do
-        return unless File.exist?(file_path)
+      return unless File.exist?(file_path)
 
-        contents = File.read(file_path)
-        return if contents.empty?
+      contents = File.read(file_path)
+      @pids = []
+      return if contents.empty?
 
-        @pids = JSON.parse(contents)
-      end
+      @pids = JSON.parse(contents)
     end
 
     def save
-      mutex.synchronize { File.write(file_path, pids.to_json) }
+      File.write(file_path, pids.to_json)
     end
   end
 end
