@@ -15,7 +15,7 @@ module ParallelSpecs
         end
 
         def tests_with_size(tests, options)
-          tests = find_tests(tests)
+          tests = find_tests(tests, options)
 
           case options[:group_by]
           when :found
@@ -179,14 +179,20 @@ module ParallelSpecs
           tests.map! { |test| [test, File.stat(test).size] }
         end
 
-        def find_tests(tests)
+        def find_tests(tests, options = {})
           tests.flat_map do |file_or_folder|
             if File.directory?(file_or_folder)
-              Dir[File.join(file_or_folder, '**/*_spec.rb')].uniq.sort
+              filter_files(Dir[File.join(file_or_folder, '**/*_spec.rb')].uniq.sort, options)
             else
-              file_or_folder
+              filter_files([file_or_folder], options)
             end
           end.uniq
+        end
+
+        def filter_files(files, options)
+          files = files.grep(options[:pattern]) if options[:pattern]
+          files = files.reject { |file| file.match?(options[:exclude_pattern]) } if options[:exclude_pattern]
+          files
         end
 
         def remove_command_arguments(command, *args)

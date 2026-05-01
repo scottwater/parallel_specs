@@ -73,6 +73,42 @@ RSpec.describe ParallelSpecs::Test::Runner do
     end
   end
 
+  describe '.find_tests' do
+    around { |example| use_temporary_directory(&example) }
+
+    before do
+      FileUtils.mkdir_p('spec/models')
+      FileUtils.mkdir_p('spec/services')
+      FileUtils.mkdir_p('spec/controllers')
+      File.write('spec/models/user_spec.rb', 'x')
+      File.write('spec/models/slow_user_spec.rb', 'x')
+      File.write('spec/services/user_sync_spec.rb', 'x')
+      File.write('spec/controllers/users_controller_spec.rb', 'x')
+    end
+
+    it 'filters discovered directory files with include and exclude patterns' do
+      files = described_class.send(
+        :find_tests,
+        ['spec'],
+        pattern: /models|services/,
+        exclude_pattern: /slow/
+      )
+
+      expect(files).to eq(%w[spec/models/user_spec.rb spec/services/user_sync_spec.rb])
+    end
+
+    it 'filters explicit file inputs' do
+      files = described_class.send(
+        :find_tests,
+        %w[spec/models/user_spec.rb spec/controllers/users_controller_spec.rb],
+        pattern: /models/,
+        exclude_pattern: /slow/
+      )
+
+      expect(files).to eq(%w[spec/models/user_spec.rb])
+    end
+  end
+
   describe '.print_command' do
     it 'prints a copy-pasteable command with rerun environment' do
       expect do

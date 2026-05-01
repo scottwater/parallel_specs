@@ -76,6 +76,22 @@ RSpec.describe 'parallel_specs integration' do
     end
   end
 
+  it 'filters spec files with include and exclude patterns' do
+    Dir.mktmpdir do |dir|
+      write(dir, 'spec/models/user_spec.rb', "RSpec.describe('model') { it('runs') { puts 'MODEL_SPEC_RAN'; expect(true).to eq(true) } }")
+      write(dir, 'spec/models/slow_user_spec.rb', "RSpec.describe('slow model') { it('runs') { puts 'SLOW_SPEC_RAN'; expect(true).to eq(true) } }")
+      write(dir, 'spec/controllers/users_controller_spec.rb', "RSpec.describe('controller') { it('runs') { puts 'CONTROLLER_SPEC_RAN'; expect(true).to eq(true) } }")
+
+      output, status = run_specs(dir, '--pattern', 'models', '--exclude-pattern', 'slow', 'spec')
+      expect(status.exitstatus).to eq(0), output
+      expect(output).to include('dashboard workers=1')
+      expect(output).to include('current_example=model+runs')
+      expect(output).not_to include('slow+model+runs')
+      expect(output).not_to include('controller+runs')
+      expect(output).to include('1 example, 0 failures')
+    end
+  end
+
   it 'uses PARALLEL_SPECS_PROCESSORS for the worker count' do
     Dir.mktmpdir do |dir|
       write(dir, 'spec/a_spec.rb', "RSpec.describe { it('passes') { expect(true).to eq(true) } }")

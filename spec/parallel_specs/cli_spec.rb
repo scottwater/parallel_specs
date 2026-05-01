@@ -29,6 +29,14 @@ RSpec.describe ParallelSpecs::CLI do
       expect(call(['--record-runtime'])).to include(record_runtime: true, dashboard: false)
     end
 
+    it 'parses file include and exclude patterns' do
+      options = call(['spec', '--pattern', 'models|services', '--exclude-pattern', 'slow'])
+
+      expect(options[:pattern]).to match('spec/models/user_spec.rb')
+      expect(options[:pattern]).not_to match('spec/controllers/users_spec.rb')
+      expect(options[:exclude_pattern]).to match('spec/models/slow_user_spec.rb')
+    end
+
     it 'merges extra rspec args passed after --' do
       expect(call(['--', '--tag', '~type:system', '--', 'spec/models'])).to include(
         files: ['spec/models'],

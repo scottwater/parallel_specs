@@ -274,6 +274,8 @@ module ParallelSpecs
           runtime - info from runtime log
           default - runtime when runtime log is filled otherwise filesize
         TEXT
+        opts.on('--pattern PATTERN', 'Only run spec files matching PATTERN') { |pattern| options[:pattern] = Regexp.new(pattern) }
+        opts.on('--exclude-pattern PATTERN', 'Skip spec files matching PATTERN') { |pattern| options[:exclude_pattern] = Regexp.new(pattern) }
         opts.on('--runtime-log PATH', 'Read spec runtimes from PATH; with --record-runtime, write the completed run there') { |path| options[:runtime_log] = path }
         opts.on('--allowed-missing COUNT', Integer, 'Allowed percentage of missing runtimes (default = 50)') { |percent| options[:allowed_missing_percent] = percent }
         opts.on('--unknown-runtime SECONDS', Float, 'Use given number as unknown runtime (otherwise use average time)') { |time| options[:unknown_runtime] = time }
