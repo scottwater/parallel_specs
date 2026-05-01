@@ -2,6 +2,7 @@
 
 require 'json'
 require 'io/console'
+require 'uri'
 
 module ParallelSpecs
   class CLI
@@ -231,8 +232,7 @@ module ParallelSpecs
       def worker_line(worker)
         plain_status = status_text_for(worker)
         colored_status = colorize(plain_status.ljust(9), status_color_for(worker))
-
-        format(
+        line = format(
           "[%<label>2d] %<status>s %<bar>s %<summary>9s p:%<passed>3d f:%<failed>3d pend:%<pending>3d",
           label: worker.label,
           status: colored_status,
@@ -242,6 +242,8 @@ module ParallelSpecs
           failed: worker.failed,
           pending: worker.pending
         )
+        line += " | #{worker.current_example}" if worker.current_example
+        truncate(line, terminal_width)
       end
 
       def plain_header_line
@@ -275,7 +277,8 @@ module ParallelSpecs
           "status=#{plain_status_text_for(worker)}",
           "passed=#{worker.passed}",
           "failed=#{worker.failed}",
-          "pending=#{worker.pending}"
+          "pending=#{worker.pending}",
+          "current_example=#{encode_plain_value(worker.current_example.to_s)}"
         ]
 
         if worker.example_total
@@ -357,6 +360,10 @@ module ParallelSpecs
         when :failing, :failed then 31
         when :passed then 32
         end
+      end
+
+      def encode_plain_value(value)
+        URI.encode_www_form_component(value)
       end
 
       def colorize(text, color)

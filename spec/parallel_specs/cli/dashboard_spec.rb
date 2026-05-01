@@ -53,6 +53,7 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
     expect(frame).to include('passed: 1')
     expect(frame).to include('[ 1] ✓ passed')
     expect(frame).to include('[############------------]')
+    expect(frame).to include('Foo foo')
     expect(frame).to include('[ 2] · queued')
   end
 
@@ -116,8 +117,8 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
       frame = dashboard.frame
 
       expect(frame).to include('dashboard workers=2 running=0 passed=1 failed=0 examples_seen=1')
-      expect(frame).to include('worker=1 status=passed passed=1 failed=0 pending=0 completed=1 total=2')
-      expect(frame).to include('worker=2 status=queued passed=0 failed=0 pending=0 files=1')
+      expect(frame).to include('worker=1 status=passed passed=1 failed=0 pending=0 current_example=Foo+foo completed=1 total=2')
+      expect(frame).to include('worker=2 status=queued passed=0 failed=0 pending=0 current_example= files=1')
       expect(frame).not_to include("\e[")
     end
   end
