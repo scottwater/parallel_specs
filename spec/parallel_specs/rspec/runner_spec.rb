@@ -45,6 +45,26 @@ RSpec.describe ParallelSpecs::RSpec::Runner do
     end
   end
 
+  describe '.rerun_command' do
+    it 'removes dashboard and runtime-only formatter arguments' do
+      command = [
+        'rspec',
+        '--format', 'progress',
+        '--format', 'ParallelSpecs::RSpec::RuntimeLogger', '--out', 'tmp/worker.log',
+        '--format', 'ParallelSpecs::RSpec::DashboardLogger',
+        'spec/a_spec.rb'
+      ]
+
+      expect(described_class.rerun_command(command)).to eq(['rspec', '--format', 'progress', 'spec/a_spec.rb'])
+    end
+
+    it 'replaces existing seed and order options with the captured seed' do
+      command = ['rspec', '--seed', '111', '--order', 'rand:111', 'spec/a_spec.rb']
+
+      expect(described_class.rerun_command(command, seed: '222')).to eq(['rspec', 'spec/a_spec.rb', '--seed', '222'])
+    end
+  end
+
   describe '.run_tests' do
     before do
       allow(ParallelSpecs).to receive(:bundler_enabled?).and_return(false)

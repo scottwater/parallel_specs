@@ -46,6 +46,15 @@ module ParallelSpecs
           "\e[#{color_code}m#{text}\e[0m"
         end
 
+        def rerun_command(command, seed: nil)
+          command = remove_rerun_only_formatters(command)
+          seed ? command_with_seed(command, seed) : command
+        end
+
+        def command_with_seed(command, seed)
+          [*remove_command_arguments(command, '--seed', '--order'), '--seed', seed]
+        end
+
         private
 
         def build_test_command(file_list, process_number, options)
@@ -57,6 +66,27 @@ module ParallelSpecs
             *dashboard_formatter(options),
             *file_list
           ]
+        end
+
+        def remove_rerun_only_formatters(command)
+          remove_formatter(command, 'ParallelSpecs::RSpec::DashboardLogger')
+            .then { |cmd| remove_formatter(cmd, 'ParallelSpecs::RSpec::RuntimeLogger') }
+        end
+
+        def remove_formatter(command, formatter)
+          cleaned = []
+          index = 0
+          while index < command.length
+            if command[index] == '--format' && command[index + 1] == formatter
+              index += 2
+            elsif command[index] == '--out' && command[index - 2] == '--format' && command[index - 1] == formatter
+              index += 2
+            else
+              cleaned << command[index]
+              index += 1
+            end
+          end
+          cleaned
         end
 
         def executable

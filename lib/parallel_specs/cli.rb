@@ -103,6 +103,7 @@ module ParallelSpecs
 
               report_results(test_results)
               report_dashboard_failures(test_results) if dashboard
+              report_failure_rerun_commands(test_results)
               runtime_log_mergeable?(test_results)
             end
           end
@@ -218,6 +219,17 @@ module ParallelSpecs
         worker_label = '1' if worker_label.to_s.empty?
         puts "--- worker #{worker_label} ---"
         puts result[:stdout]
+      end
+    end
+
+    def report_failure_rerun_commands(test_results)
+      failures = test_results.reject { |result| result[:exit_status].zero? }
+      return if failures.empty?
+
+      puts "\nRerun failed worker commands:\n"
+      failures.each do |result|
+        command = @runner.rerun_command(result[:command], seed: result[:seed])
+        @runner.print_command(command, result[:env] || {})
       end
     end
 

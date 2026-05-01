@@ -112,6 +112,31 @@ RSpec.describe ParallelSpecs::CLI do
     end
   end
 
+  describe '#report_failure_rerun_commands' do
+    it 'prints rerun commands for failed workers with captured seeds' do
+      runner = Class.new do
+        class << self
+          def rerun_command(command, seed: nil)
+            [*command, '--seed', seed]
+          end
+
+          def print_command(command, _env)
+            puts command.join(' ')
+          end
+        end
+      end
+      cli.instance_variable_set(:@runner, runner)
+      results = [
+        { exit_status: 0, command: ['rspec', 'spec/pass_spec.rb'], env: {} },
+        { exit_status: 1, command: ['rspec', 'spec/fail_spec.rb'], env: {}, seed: '1234' }
+      ]
+
+      expect do
+        cli.send(:report_failure_rerun_commands, results)
+      end.to output(/Rerun failed worker commands:\nrspec spec\/fail_spec\.rb --seed 1234/).to_stdout
+    end
+  end
+
   describe '#with_runtime_log_files' do
     around { |example| use_temporary_directory(&example) }
 

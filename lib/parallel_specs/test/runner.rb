@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'parallel_specs'
+require 'shellwords'
 
 module ParallelSpecs
   module Test
@@ -87,7 +88,21 @@ module ParallelSpecs
             1
           end
 
-          { env: env, stdout: output, exit_status: exit_status, command: cmd }
+          { env: env, stdout: output, exit_status: exit_status, command: cmd, seed: seed_from(output) }
+        end
+
+        def print_command(command, env = {})
+          env_string = rerun_env(env).map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(' ')
+          command_string = Shellwords.shelljoin(command)
+          puts [env_string, command_string].reject(&:empty?).join(' ')
+        end
+
+        def rerun_command(command, seed: nil)
+          seed ? command_with_seed(command, seed) : command
+        end
+
+        def command_with_seed(command, seed)
+          [*remove_command_arguments(command, '--seed'), '--seed', seed]
         end
 
         def find_results(test_output)
@@ -119,6 +134,10 @@ module ParallelSpecs
             nil
           end
           result
+        end
+
+        def seed_from(output)
+          output.to_s[/seed (\d+)/, 1]
         end
 
         def sort_by_runtime(tests, runtimes, options = {})
@@ -168,6 +187,27 @@ module ParallelSpecs
               file_or_folder
             end
           end.uniq
+        end
+
+        def remove_command_arguments(command, *args)
+          remove_next = false
+          command.reject do |arg|
+            if remove_next
+              remove_next = false
+              true
+            elsif args.include?(arg)
+              remove_next = true
+              true
+            elsif args.any? { |option| arg.start_with?("#{option}=") }
+              true
+            else
+              false
+            end
+          end
+        end
+
+        def rerun_env(env)
+          env.slice('TEST_ENV_NUMBER', 'PARALLEL_SPECS_GROUPS').reject { |_key, value| value.to_s.empty? }
         end
 
         def test_env_number(process_number)

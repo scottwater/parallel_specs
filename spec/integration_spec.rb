@@ -70,6 +70,8 @@ RSpec.describe 'parallel_specs integration' do
       expect(output).to include('Failed worker output:')
       expect(output).to include('fails with useful details')
       expect(output).to include('expected: true')
+      expect(output).to include('Rerun failed worker commands:')
+      expect(output).to include('spec/b_spec.rb')
       expect(output).to include('Specs Failed')
     end
   end

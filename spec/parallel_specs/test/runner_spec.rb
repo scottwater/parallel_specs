@@ -30,6 +30,13 @@ RSpec.describe ParallelSpecs::Test::Runner do
       end
     end
 
+    it 'captures the RSpec seed from worker output' do
+      run_with_file("puts 'Randomized with seed 12345'") do |path|
+        result = call(['ruby', path], 1, 4, dashboard: true)
+        expect(result[:seed]).to eq('12345')
+      end
+    end
+
     it 'sets the dashboard log env var when dashboard output is enabled' do
       run_with_file("puts File.basename(ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG'])") do |path|
         result = call(['ruby', path], 1, 4, dashboard_event_files: { 1 => '/tmp/worker-2.jsonl' }, dashboard: true)
@@ -63,6 +70,18 @@ RSpec.describe ParallelSpecs::Test::Runner do
           expect(ParallelSpecs.pids.all).to be_empty
         end
       end
+    end
+  end
+
+  describe '.print_command' do
+    it 'prints a copy-pasteable command with rerun environment' do
+      expect do
+        described_class.print_command(['bundle', 'exec', 'rspec', 'spec/a spec.rb'], {
+          'TEST_ENV_NUMBER' => '2',
+          'PARALLEL_SPECS_GROUPS' => '4',
+          'PARALLEL_SPECS_PID_FILE' => '/tmp/ignored'
+        })
+      end.to output("TEST_ENV_NUMBER=2 PARALLEL_SPECS_GROUPS=4 bundle exec rspec spec/a\\ spec.rb\n").to_stdout
     end
   end
 end
