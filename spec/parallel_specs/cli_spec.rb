@@ -37,6 +37,10 @@ RSpec.describe ParallelSpecs::CLI do
       expect(options[:exclude_pattern]).to match('spec/models/slow_user_spec.rb')
     end
 
+    it 'parses fail-fast mode' do
+      expect(call(['--fail-fast'])).to include(fail_fast: true)
+    end
+
     it 'merges extra rspec args passed after --' do
       expect(call(['--', '--tag', '~type:system', '--', 'spec/models'])).to include(
         files: ['spec/models'],
@@ -80,6 +84,28 @@ RSpec.describe ParallelSpecs::CLI do
 
         cli.send(:handle_interrupt)
       end
+    end
+  end
+
+  describe '#execute_in_parallel' do
+    it 'stops remaining workers after a failed result when fail-fast is enabled' do
+      expect(ParallelSpecs).to receive(:stop_all_processes)
+
+      results = cli.send(:execute_in_parallel, [:group], 1, fail_fast: true) do
+        { exit_status: 1 }
+      end
+
+      expect(results).to eq([{ exit_status: 1 }])
+    end
+
+    it 'does not stop remaining workers after a failed result by default' do
+      expect(ParallelSpecs).not_to receive(:stop_all_processes)
+
+      results = cli.send(:execute_in_parallel, [:group], 1, {}) do
+        { exit_status: 1 }
+      end
+
+      expect(results).to eq([{ exit_status: 1 }])
     end
   end
 

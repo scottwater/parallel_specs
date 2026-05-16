@@ -124,6 +124,7 @@ module ParallelSpecs
             options[:dashboard_runner]&.worker_started(index)
             result = yield(item, index)
             options[:dashboard_runner]&.worker_finished(index, exit_status: result[:exit_status])
+            ParallelSpecs.stop_all_processes if options[:fail_fast] && !result[:exit_status].zero?
             result
           end
         end
@@ -280,6 +281,7 @@ module ParallelSpecs
         opts.on('--allowed-missing COUNT', Integer, 'Allowed percentage of missing runtimes (default = 50)') { |percent| options[:allowed_missing_percent] = percent }
         opts.on('--unknown-runtime SECONDS', Float, 'Use given number as unknown runtime (otherwise use average time)') { |time| options[:unknown_runtime] = time }
         opts.on('--record-runtime', 'Record runtimes and replace the runtime log only after a successful complete run') { options[:record_runtime] = true }
+        opts.on('--fail-fast', 'Stop remaining workers after one worker fails') { options[:fail_fast] = true }
         opts.on('-v', '--version', 'Show version') { puts ParallelSpecs::VERSION; exit 0 }
         opts.on('-h', '--help', 'Show this help') { puts opts; exit 0 }
       end.parse!(argv)
