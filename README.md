@@ -1,5 +1,7 @@
 # Parallel Specs
 
+![Parallel Specs social preview](assets/github-social-preview-rspecish.png)
+
 A focused extraction of the RSpec pieces from `parallel_tests` with only the parts this gem actually needs:
 
 - a live local dashboard
