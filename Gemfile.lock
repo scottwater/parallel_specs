@@ -2,8 +2,8 @@ PATH
   remote: .
   specs:
     parallel_specs (1.0.0)
-      parallel
-      rspec-core
+      parallel (>= 1.28, < 3)
+      rspec-core (>= 3.13, < 4)
 
 GEM
   remote: https://rubygems.org/

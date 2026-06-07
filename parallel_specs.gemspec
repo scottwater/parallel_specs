@@ -13,6 +13,6 @@ Gem::Specification.new name, ParallelSpecs::VERSION do |s|
   s.bindir = 'bin'
   s.executables = ['parallel_specs']
 
-  s.add_dependency 'parallel'
-  s.add_dependency 'rspec-core'
+  s.add_dependency 'parallel', '>= 1.28', '< 3'
+  s.add_dependency 'rspec-core', '>= 3.13', '< 4'
 end
