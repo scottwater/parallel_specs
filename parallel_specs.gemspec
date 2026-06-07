@@ -9,7 +9,7 @@ Gem::Specification.new name, ParallelSpecs::VERSION do |s|
   s.homepage = 'https://github.com/scottwater/parallel_specs'
   s.license = 'MIT'
   s.required_ruby_version = '>= 3.2.0'
-  s.files = Dir['{lib,bin}/**/*'] + ['README.md']
+  s.files = Dir['{lib,bin}/**/*'] + ['LICENSE', 'README.md']
   s.bindir = 'bin'
   s.executables = ['parallel_specs']
 
