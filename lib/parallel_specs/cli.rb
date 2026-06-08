@@ -12,6 +12,9 @@ require 'parallel_specs/rspec/runner'
 
 module ParallelSpecs
   class CLI
+    DEFAULT_RERUN_COMMAND_SPEC_FILE_LIMIT = 25
+    DEFAULT_RERUN_COMMAND_CHAR_LIMIT = 2_000
+
     def initialize
       @runner = ParallelSpecs::RSpec::Runner
     end
@@ -227,11 +230,72 @@ module ParallelSpecs
       failures = test_results.reject { |result| result[:exit_status].zero? }
       return if failures.empty?
 
-      puts "\nRerun failed worker commands:\n"
-      failures.each do |result|
-        command = @runner.rerun_command(result[:command], seed: result[:seed])
-        @runner.print_command(command, result[:env] || {})
+      rerun_commands = failures.map do |result|
+        { result: result, command: @runner.rerun_command(result[:command], seed: result[:seed]) }
       end
+
+      if print_full_rerun_commands?(rerun_commands)
+        puts "\nRerun failed worker commands:\n"
+        rerun_commands.each do |entry|
+          @runner.print_command(entry[:command], entry[:result][:env] || {})
+        end
+      else
+        report_failure_rerun_command_summary(rerun_commands)
+      end
+    end
+
+    def print_full_rerun_commands?(rerun_commands)
+      return true if truthy_env?('PARALLEL_SPECS_FULL_RERUN_COMMANDS')
+
+      rerun_commands.all? do |entry|
+        rerun_command_spec_file_count(entry[:command]) <= rerun_command_spec_file_limit &&
+          rerun_command_length(entry[:command], entry[:result][:env] || {}) <= rerun_command_char_limit
+      end
+    end
+
+    def report_failure_rerun_command_summary(rerun_commands)
+      total_spec_files = rerun_commands.sum { |entry| rerun_command_spec_file_count(entry[:command]) }
+
+      puts "\nFull worker rerun commands omitted to keep failure output readable."
+      puts "#{pluralize(rerun_commands.size, 'failed worker')} included #{pluralize(total_spec_files, @runner.test_file_name)}."
+      puts 'RSpec failure output above includes failed example locations.'
+      puts 'Set PARALLEL_SPECS_FULL_RERUN_COMMANDS=1 to print full worker rerun commands.'
+
+      rerun_commands.each do |entry|
+        result = entry[:result]
+        worker_label = result.dig(:env, 'TEST_ENV_NUMBER')
+        worker_label = '1' if worker_label.to_s.empty?
+        seed = result[:seed] ? ", seed #{result[:seed]}" : ''
+        puts "worker #{worker_label}: #{pluralize(rerun_command_spec_file_count(entry[:command]), @runner.test_file_name)}#{seed}"
+      end
+    end
+
+    def rerun_command_spec_file_count(command)
+      command.count { |arg| arg.end_with?('_spec.rb') }
+    end
+
+    def rerun_command_length(command, env)
+      rerun_env = env.slice('TEST_ENV_NUMBER', 'PARALLEL_SPECS_GROUPS').reject { |_key, value| value.to_s.empty? }
+      env_string = rerun_env.map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(' ')
+      [env_string, Shellwords.shelljoin(command)].reject(&:empty?).join(' ').length
+    end
+
+    def rerun_command_spec_file_limit
+      positive_integer_env('PARALLEL_SPECS_RERUN_COMMAND_SPEC_FILE_LIMIT') || DEFAULT_RERUN_COMMAND_SPEC_FILE_LIMIT
+    end
+
+    def rerun_command_char_limit
+      positive_integer_env('PARALLEL_SPECS_RERUN_COMMAND_CHAR_LIMIT') || DEFAULT_RERUN_COMMAND_CHAR_LIMIT
+    end
+
+    def positive_integer_env(name)
+      Integer(ENV.fetch(name, nil)).then { |value| value.positive? ? value : nil }
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def truthy_env?(name)
+      %w[1 true yes].include?(ENV.fetch(name, '').downcase)
     end
 
     def report_number_of_tests(groups)

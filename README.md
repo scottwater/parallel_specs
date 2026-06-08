@@ -47,6 +47,9 @@ The supported environment variables are:
 - `PARALLEL_SPECS_PROCESSORS` sets the default worker count when `-n` is not provided.
 - `PARALLEL_SPECS_DASHBOARD_MODE` can be `interactive` or `plain` to override automatic dashboard selection.
 - `PARALLEL_SPECS_HEARTBEAT_INTERVAL` sets the plain-dashboard heartbeat interval in seconds.
+- `PARALLEL_SPECS_FULL_RERUN_COMMANDS=1` prints full failed-worker rerun commands even when they are long.
+- `PARALLEL_SPECS_RERUN_COMMAND_SPEC_FILE_LIMIT` sets how many spec files a failed-worker rerun command may include before it is summarized instead of printed. The default is 25.
+- `PARALLEL_SPECS_RERUN_COMMAND_CHAR_LIMIT` sets the maximum failed-worker rerun command length before it is summarized instead of printed. The default is 2000.
 - `CI` makes dashboard output default to plain mode.
 
 Worker processes continue to receive `TEST_ENV_NUMBER` for compatibility with existing test-environment isolation setup.

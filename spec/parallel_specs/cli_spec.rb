@@ -147,19 +147,29 @@ RSpec.describe ParallelSpecs::CLI do
   end
 
   describe '#report_failure_rerun_commands' do
-    it 'prints rerun commands for failed workers with captured seeds' do
-      runner = Class.new do
+    let(:runner) do
+      Class.new do
         class << self
           def rerun_command(command, seed: nil)
-            [*command, '--seed', seed]
+            seed ? [*command, '--seed', seed] : command
           end
 
           def print_command(command, _env)
             puts command.join(' ')
           end
+
+          def test_file_name
+            'spec'
+          end
         end
       end
+    end
+
+    before do
       cli.instance_variable_set(:@runner, runner)
+    end
+
+    it 'prints rerun commands for failed workers with captured seeds' do
       results = [
         { exit_status: 0, command: ['rspec', 'spec/pass_spec.rb'], env: {} },
         { exit_status: 1, command: ['rspec', 'spec/fail_spec.rb'], env: {}, seed: '1234' }
@@ -168,6 +178,32 @@ RSpec.describe ParallelSpecs::CLI do
       expect do
         cli.send(:report_failure_rerun_commands, results)
       end.to output(/Rerun failed worker commands:\nrspec spec\/fail_spec\.rb --seed 1234/).to_stdout
+    end
+
+    it 'summarizes failed worker rerun commands when a command includes many spec files' do
+      command = ['rspec', *(1..26).map { |index| "spec/file_#{index}_spec.rb" }]
+      results = [{ exit_status: 1, command: command, env: { 'TEST_ENV_NUMBER' => '2' }, seed: '1234' }]
+
+      expect do
+        cli.send(:report_failure_rerun_commands, results)
+      end.to output(<<~OUTPUT).to_stdout
+
+        Full worker rerun commands omitted to keep failure output readable.
+        1 failed worker included 26 specs.
+        RSpec failure output above includes failed example locations.
+        Set PARALLEL_SPECS_FULL_RERUN_COMMANDS=1 to print full worker rerun commands.
+        worker 2: 26 specs, seed 1234
+      OUTPUT
+    end
+
+    it 'prints long failed worker rerun commands when explicitly requested' do
+      ENV['PARALLEL_SPECS_FULL_RERUN_COMMANDS'] = '1'
+      command = ['rspec', *(1..26).map { |index| "spec/file_#{index}_spec.rb" }]
+      results = [{ exit_status: 1, command: command, env: {}, seed: '1234' }]
+
+      expect do
+        cli.send(:report_failure_rerun_commands, results)
+      end.to output(/Rerun failed worker commands:\nrspec spec\/file_1_spec\.rb.*--seed 1234/m).to_stdout
     end
   end
 

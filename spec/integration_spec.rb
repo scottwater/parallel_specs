@@ -76,6 +76,23 @@ RSpec.describe 'parallel_specs integration' do
     end
   end
 
+  it 'summarizes large failed worker rerun commands in default plain dashboard mode' do
+    Dir.mktmpdir do |dir|
+      (1..26).each do |index|
+        expectation = index == 1 ? 'expect(false).to eq(true)' : 'expect(true).to eq(true)'
+        write(dir, "spec/file_#{index}_spec.rb", "RSpec.describe { it('runs file #{index}') { #{expectation} } }")
+      end
+
+      output, status = run_specs(dir, '-n', '1', 'spec')
+      expect(status.exitstatus).to eq(1), output
+      expect(output).to include('Failed worker output:')
+      expect(output).to include('runs file 1')
+      expect(output).not_to include('Rerun failed worker commands:')
+      expect(output).to include('Full worker rerun commands omitted to keep failure output readable.')
+      expect(output).to include('1 failed worker included 26 specs.')
+    end
+  end
+
   it 'filters spec files with include and exclude patterns' do
     Dir.mktmpdir do |dir|
       write(dir, 'spec/models/user_spec.rb', "RSpec.describe('model') { it('runs') { puts 'MODEL_SPEC_RAN'; expect(true).to eq(true) } }")
