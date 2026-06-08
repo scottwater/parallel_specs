@@ -2,6 +2,7 @@
 
 require 'json'
 require 'io/console'
+require 'strscan'
 require 'uri'
 
 module ParallelSpecs
@@ -45,7 +46,8 @@ module ParallelSpecs
         @event_offsets = Hash.new(0)
         @event_remainders = Hash.new { |hash, key| hash[key] = +"" }
         @spinner_index = 0
-        @rendered_lines = 0
+        @rendered_rows = 0
+        @last_frame = nil
         @dirty = true
       end
 
@@ -186,14 +188,20 @@ module ParallelSpecs
       end
 
       def render_interactive
+        @render_width = terminal_width
         output = frame
-        if @rendered_lines > 0
-          @output.print("\e[#{@rendered_lines}A")
+        rows_to_clear = [@rendered_rows, rendered_rows_for(@last_frame, @render_width)].max
+
+        if rows_to_clear.positive?
+          @output.print("\e[#{rows_to_clear}A")
           @output.print("\r\e[J")
         end
         @output.print(output)
         @output.flush if @output.respond_to?(:flush)
-        @rendered_lines = output.lines.count
+        @rendered_rows = rendered_rows_for(output, @render_width)
+        @last_frame = output
+      ensure
+        @render_width = nil
       end
 
       def render_plain
@@ -202,9 +210,6 @@ module ParallelSpecs
       end
 
       def header_line
-        running = workers.count { |worker| status_for(worker) == :running }
-        passed = workers.count { |worker| status_for(worker) == :passed }
-        failed = workers.count { |worker| [:failing, :failed].include?(status_for(worker)) }
         examples_seen = workers.sum { |worker| examples_seen_for(worker) }
         total_examples = workers.filter_map(&:example_total)
         example_summary = if total_examples.empty?
@@ -216,15 +221,7 @@ module ParallelSpecs
         end
 
         truncate(
-          [
-            'Parallel RSpec dashboard',
-            "workers: #{workers.size}",
-            "running: #{running}",
-            "passed: #{passed}",
-            "failed: #{failed}",
-            example_summary,
-            "elapsed: #{format_duration(elapsed_seconds)}"
-          ].join(' | '),
+          [example_summary, "elapsed: #{format_duration(elapsed_seconds)}"].join(' | '),
           terminal_width
         )
       end
@@ -242,7 +239,6 @@ module ParallelSpecs
           failed: worker.failed,
           pending: worker.pending
         )
-        line += " | #{worker.current_example}" if worker.current_example
         truncate(line, terminal_width)
       end
 
@@ -395,20 +391,56 @@ module ParallelSpecs
       end
 
       def terminal_width
-        @terminal_width ||= @width || begin
+        return @render_width if @render_width
+
+        width = if @width.respond_to?(:call)
+          @width.call
+        elsif @width
+          @width
+        else
           console = IO.console
           console&.winsize&.last || 120
-        rescue StandardError
-          120
+        end
+
+        [width.to_i - 1, 1].max
+      rescue StandardError
+        119
+      end
+
+      def rendered_rows_for(output, width)
+        return 0 if output.to_s.empty?
+
+        output.lines.sum do |line|
+          visible_width = visible_length(line.chomp)
+          [((visible_width - 1) / width) + 1, 1].max
         end
       end
 
       def truncate(text, max_length)
         return '' if max_length <= 0
-        return text if text.length <= max_length
-        return text[0, max_length] if max_length <= 1
+        return text if visible_length(text) <= max_length
+        return '…' if max_length <= 1
 
-        "#{text[0, max_length - 1]}…"
+        truncated = +''
+        visible_count = 0
+        scanner = StringScanner.new(text)
+
+        until scanner.eos? || visible_count >= max_length - 1
+          if (escape_sequence = scanner.scan(/\e\[[\d;]*m/))
+            truncated << escape_sequence
+          else
+            truncated << scanner.getch
+            visible_count += 1
+          end
+        end
+
+        truncated << '…'
+        truncated << "\e[0m" if text.include?("\e[")
+        truncated
+      end
+
+      def visible_length(text)
+        text.gsub(/\e\[[\d;]*m/, '').length
       end
     end
   end

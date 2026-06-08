@@ -48,12 +48,13 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
 
     frame = dashboard.frame
 
-    expect(frame).to include('Parallel RSpec dashboard')
-    expect(frame).to include('workers: 2')
-    expect(frame).to include('passed: 1')
+    expect(frame).to include('examples: 1/2 known')
+    expect(frame).to include('elapsed:')
+    expect(frame).not_to include('workers: 2')
+    expect(frame).not_to include('passed: 1')
     expect(frame).to include('[ 1] ✓ passed')
     expect(frame).to include('[############------------]')
-    expect(frame).to include('Foo foo')
+    expect(frame).not_to include('Foo foo')
     expect(frame).to include('[ 2] · queued')
   end
 
@@ -102,6 +103,22 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
     expect(worker.example_total).to eq(2)
     expect(worker.passed).to eq(1)
     expect(worker.current_example).to eq('Foo foo')
+  end
+
+  it 'checks the terminal width on each render so resize can recover' do
+    widths = [80, 20]
+    dashboard = described_class.new(
+      groups: [['a_spec.rb'], ['b_spec.rb']],
+      event_files: event_files,
+      output: output,
+      use_colors: false,
+      mode: :interactive,
+      now: now,
+      width: -> { widths.shift || 20 }
+    )
+
+    expect(dashboard.send(:terminal_width)).to eq(79)
+    expect(dashboard.send(:terminal_width)).to eq(19)
   end
 
   context 'in plain mode' do
