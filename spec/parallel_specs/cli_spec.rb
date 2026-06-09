@@ -41,6 +41,12 @@ RSpec.describe ParallelSpecs::CLI do
       expect(call(['--fail-fast'])).to include(fail_fast: true)
     end
 
+    it 'parses dashboard mode' do
+      expect(call(['--dashboard-mode', 'plain'])).to include(dashboard_mode: :plain)
+      expect(call(['--plain-dashboard'])).to include(dashboard_mode: :plain)
+      expect(call(['--plain'])).to include(dashboard_mode: :plain)
+    end
+
     it 'merges extra rspec args passed after --' do
       expect(call(['--', '--tag', '~type:system', '--', 'spec/models'])).to include(
         files: ['spec/models'],
@@ -270,6 +276,12 @@ RSpec.describe ParallelSpecs::CLI do
       allow($stdout).to receive(:tty?).and_return(true)
       ENV['CI'] = '1'
       expect(cli.send(:dashboard_mode)).to eq(:plain)
+    end
+
+    it 'respects the option override' do
+      allow($stdout).to receive(:tty?).and_return(true)
+      ENV['CI'] = '1'
+      expect(cli.send(:dashboard_mode, dashboard_mode: :interactive)).to eq(:interactive)
     end
 
     it 'respects the override env var' do

@@ -196,7 +196,7 @@ module ParallelSpecs
         options[:dashboard_runner] = ParallelSpecs::CLI::Dashboard.new(
           groups: groups,
           event_files: event_files,
-          mode: dashboard_mode,
+          mode: dashboard_mode(options),
           use_colors: use_colors?
         )
 
@@ -339,6 +339,9 @@ module ParallelSpecs
           runtime - info from runtime log
           default - runtime when runtime log is filled otherwise filesize
         TEXT
+        opts.on('--dashboard-mode MODE', %w[interactive plain], 'Dashboard mode: interactive or plain') { |mode| options[:dashboard_mode] = mode.to_sym }
+        opts.on('--plain-dashboard', 'Use the plain text dashboard output') { options[:dashboard_mode] = :plain }
+        opts.on('--plain', 'Use the plain text dashboard output') { options[:dashboard_mode] = :plain }
         opts.on('--pattern PATTERN', 'Only run spec files matching PATTERN') { |pattern| options[:pattern] = Regexp.new(pattern) }
         opts.on('--exclude-pattern PATTERN', 'Skip spec files matching PATTERN') { |pattern| options[:exclude_pattern] = Regexp.new(pattern) }
         opts.on('--runtime-log PATH', 'Read spec runtimes from PATH; with --record-runtime, write the completed run there') { |path| options[:runtime_log] = path }
@@ -403,7 +406,9 @@ module ParallelSpecs
       options[:dashboard_runner]&.plain?
     end
 
-    def dashboard_mode
+    def dashboard_mode(options = {})
+      return options[:dashboard_mode] if options[:dashboard_mode]
+
       override = ENV['PARALLEL_SPECS_DASHBOARD_MODE']
       return override.to_sym if %w[interactive plain].include?(override)
 

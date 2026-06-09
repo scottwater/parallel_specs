@@ -125,7 +125,7 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
     let(:mode) { :plain }
     let(:now) { -> { Time.now.to_i } }
 
-    it 'renders machine-friendly plain text lines' do
+    it 'renders the same concise summary as the interactive header' do
       dashboard.worker_started(0)
       dashboard.process_event(0, 'event' => 'start', 'total' => 2)
       dashboard.process_event(0, 'event' => 'example_passed', 'example' => 'Foo foo')
@@ -133,9 +133,9 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
 
       frame = dashboard.frame
 
-      expect(frame).to include('dashboard workers=2 running=0 passed=1 failed=0 examples_seen=1')
-      expect(frame).to include('worker=1 status=passed passed=1 failed=0 pending=0 current_example=Foo+foo completed=1 total=2')
-      expect(frame).to include('worker=2 status=queued passed=0 failed=0 pending=0 current_example= files=1')
+      expect(frame).to eq("examples: 1/2 known | elapsed: 00:00\n")
+      expect(frame).not_to include('worker=')
+      expect(frame).not_to include('Foo foo')
       expect(frame).not_to include("\e[")
     end
   end

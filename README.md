@@ -40,11 +40,16 @@ If you previously used `parallel_tests`, this is the same database naming conven
 ```bash
 bundle exec parallel_specs
 bundle exec parallel_specs -n 6
+bundle exec parallel_specs --dashboard-mode plain
+bundle exec parallel_specs --plain
+bundle exec parallel_specs --plain-dashboard
 bundle exec parallel_specs --test-options='--tag ~type:system'
 bundle exec parallel_specs --record-runtime
 ```
 
-Local TTY runs render the interactive dashboard. CI and other non-TTY runs automatically fall back to the plain text summary.
+Local TTY runs render the interactive dashboard. CI and other non-TTY runs automatically fall back to the plain text summary. Use `--plain`, `--dashboard-mode plain`, or `--plain-dashboard` to force plain dashboard output without setting an environment variable.
+
+Plain dashboard output is intentionally minimal: it prints the examples counter and elapsed time, then relies on the process exit status and the final RSpec summary for success or failure. It does not print per-worker rows or current example names.
 
 ## Runtime balancing
 
@@ -118,7 +123,7 @@ Set `PARALLEL_SPECS_RAILS_ENV` to prepare an environment other than `test`.
 The supported environment variables are:
 
 - `PARALLEL_SPECS_PROCESSORS` sets the default worker count when `-n` is not provided and when Rails database tasks are run without a count.
-- `PARALLEL_SPECS_DASHBOARD_MODE` can be `interactive` or `plain` to override automatic dashboard selection.
+- `PARALLEL_SPECS_DASHBOARD_MODE` can be `interactive` or `plain` to override automatic dashboard selection. You can also use `--plain`, `--dashboard-mode plain`, or `--plain-dashboard` for a single run.
 - `PARALLEL_SPECS_HEARTBEAT_INTERVAL` sets the plain-dashboard heartbeat interval in seconds.
 - `PARALLEL_SPECS_FULL_RERUN_COMMANDS=1` prints full failed-worker rerun commands even when they are long.
 - `PARALLEL_SPECS_RERUN_COMMAND_SPEC_FILE_LIMIT` sets how many spec files a failed-worker rerun command may include before it is summarized instead of printed. The default is 25.

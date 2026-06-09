@@ -3,7 +3,6 @@
 require 'json'
 require 'io/console'
 require 'strscan'
-require 'uri'
 
 module ParallelSpecs
   class CLI
@@ -163,7 +162,7 @@ module ParallelSpecs
         lines = if interactive?
           [header_line, *workers.map { |worker| worker_line(worker) }]
         else
-          [plain_header_line, *workers.map { |worker| plain_worker_line(worker) }]
+          [plain_header_line]
         end
         "#{lines.join("\n")}\n"
       end
@@ -243,48 +242,7 @@ module ParallelSpecs
       end
 
       def plain_header_line
-        running = workers.count { |worker| status_for(worker) == :running }
-        passed = workers.count { |worker| status_for(worker) == :passed }
-        failed = workers.count { |worker| [:failing, :failed].include?(status_for(worker)) }
-        examples_seen = workers.sum { |worker| examples_seen_for(worker) }
-        total_examples = workers.filter_map(&:example_total)
-
-        parts = [
-          'dashboard',
-          "workers=#{workers.size}",
-          "running=#{running}",
-          "passed=#{passed}",
-          "failed=#{failed}",
-          "examples_seen=#{examples_seen}",
-          "elapsed=#{format_duration(elapsed_seconds)}"
-        ]
-
-        unless total_examples.empty?
-          parts << "examples_total=#{total_examples.sum}"
-          parts << "examples_known=#{total_examples.size == workers.size}"
-        end
-
-        parts.join(' ')
-      end
-
-      def plain_worker_line(worker)
-        parts = [
-          "worker=#{worker.label}",
-          "status=#{plain_status_text_for(worker)}",
-          "passed=#{worker.passed}",
-          "failed=#{worker.failed}",
-          "pending=#{worker.pending}",
-          "current_example=#{encode_plain_value(worker.current_example.to_s)}"
-        ]
-
-        if worker.example_total
-          parts << "completed=#{examples_seen_for(worker)}"
-          parts << "total=#{worker.example_total}"
-        else
-          parts << "files=#{worker.files_count}"
-        end
-
-        parts.join(' ')
+        header_line
       end
 
       def progress_summary_for(worker)
@@ -339,16 +297,6 @@ module ParallelSpecs
         end
       end
 
-      def plain_status_text_for(worker)
-        case status_for(worker)
-        when :queued then 'queued'
-        when :running then 'running'
-        when :failing then 'failing'
-        when :failed then 'failed'
-        when :passed then 'passed'
-        end
-      end
-
       def status_color_for(worker)
         case status_for(worker)
         when :queued then 90
@@ -356,10 +304,6 @@ module ParallelSpecs
         when :failing, :failed then 31
         when :passed then 32
         end
-      end
-
-      def encode_plain_value(value)
-        URI.encode_www_form_component(value)
       end
 
       def colorize(text, color)

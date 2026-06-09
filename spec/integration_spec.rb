@@ -54,8 +54,8 @@ RSpec.describe 'parallel_specs integration' do
 
       output, status = run_specs(dir, '-n', '2', 'spec')
       expect(status.exitstatus).to eq(0), output
-      expect(output).to match(/^dashboard workers=2.*$/)
-      expect(output).to match(/^worker=1 status=.*$/)
+      expect(output).to match(/^examples: 2\/2 \| elapsed: \d{2}:\d{2}$/)
+      expect(output).not_to include('worker=')
       expect(output).to include('2 examples, 0 failures')
     end
   end
@@ -101,8 +101,8 @@ RSpec.describe 'parallel_specs integration' do
 
       output, status = run_specs(dir, '--pattern', 'models', '--exclude-pattern', 'slow', 'spec')
       expect(status.exitstatus).to eq(0), output
-      expect(output).to include('dashboard workers=1')
-      expect(output).to include('current_example=model+runs')
+      expect(output).to match(/^examples: 1\/1 \| elapsed: \d{2}:\d{2}$/)
+      expect(output).not_to include('current_example=')
       expect(output).not_to include('slow+model+runs')
       expect(output).not_to include('controller+runs')
       expect(output).to include('1 example, 0 failures')
@@ -116,7 +116,7 @@ RSpec.describe 'parallel_specs integration' do
 
       output, status = run_specs(dir, 'spec', env: { 'PARALLEL_SPECS_PROCESSORS' => '2' })
       expect(status.exitstatus).to eq(0), output
-      expect(output).to match(/^dashboard workers=2.*$/)
+      expect(output).to match(/^examples: 2\/2 \| elapsed: \d{2}:\d{2}$/)
     end
   end
 
@@ -127,7 +127,7 @@ RSpec.describe 'parallel_specs integration' do
 
       output, status = run_specs(dir, '-n', '2', 'spec', env: { 'PARALLEL_SPECS_HEARTBEAT_INTERVAL' => '0.05' })
       expect(status.exitstatus).to eq(0), output
-      expect(output).to match(/\.{3,}.*dashboard workers=2/m)
+      expect(output).to match(/\.{3,}.*examples: 2\/2 \| elapsed: \d{2}:\d{2}/m)
     end
   end
 
