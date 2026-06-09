@@ -92,3 +92,5 @@ module ParallelSpecs
     end
   end
 end
+
+require 'parallel_specs/railtie' if defined?(Rails::Railtie)
