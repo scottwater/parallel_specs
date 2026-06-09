@@ -1,35 +1,35 @@
 # frozen_string_literal: true
 
-require 'parallel'
-require 'rbconfig'
-require 'tempfile'
+require "parallel"
+require "rbconfig"
+require "tempfile"
 
 module ParallelSpecs
-  WINDOWS = (RbConfig::CONFIG['host_os'] =~ /cygwin|mswin|mingw|bccwin|wince|emx/)
-  RUBY_BINARY = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
+  WINDOWS = (RbConfig::CONFIG["host_os"] =~ /cygwin|mswin|mingw|bccwin|wince|emx/)
+  RUBY_BINARY = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"])
 
-  autoload :CLI, 'parallel_specs/cli'
-  autoload :VERSION, 'parallel_specs/version'
-  autoload :Grouper, 'parallel_specs/grouper'
-  autoload :Pids, 'parallel_specs/pids'
+  autoload :CLI, "parallel_specs/cli"
+  autoload :VERSION, "parallel_specs/version"
+  autoload :Grouper, "parallel_specs/grouper"
+  autoload :Pids, "parallel_specs/pids"
 
   class << self
     def determine_number_of_processes(count)
       Integer([
         count,
-        ENV['PARALLEL_SPECS_PROCESSORS'],
+        ENV["PARALLEL_SPECS_PROCESSORS"],
         Parallel.processor_count
       ].detect { |value| !value.to_s.strip.empty? })
     end
 
     def with_pid_file
-      previous_pid_file = ENV['PARALLEL_SPECS_PID_FILE']
-      Tempfile.open('parallel_specs-pidfile') do |file|
-        ENV['PARALLEL_SPECS_PID_FILE'] = file.path
+      previous_pid_file = ENV["PARALLEL_SPECS_PID_FILE"]
+      Tempfile.open("parallel_specs-pidfile") do |file|
+        ENV["PARALLEL_SPECS_PID_FILE"] = file.path
         @pids = pids
         yield
       ensure
-        ENV['PARALLEL_SPECS_PID_FILE'] = previous_pid_file
+        ENV["PARALLEL_SPECS_PID_FILE"] = previous_pid_file
         @pids = nil
       end
     end
@@ -39,11 +39,11 @@ module ParallelSpecs
     end
 
     def pid_file_available?
-      !ENV['PARALLEL_SPECS_PID_FILE'].to_s.empty?
+      !ENV["PARALLEL_SPECS_PID_FILE"].to_s.empty?
     end
 
     def pid_file_path
-      ENV.fetch('PARALLEL_SPECS_PID_FILE')
+      ENV.fetch("PARALLEL_SPECS_PID_FILE")
     end
 
     def stop_all_processes
@@ -68,17 +68,17 @@ module ParallelSpecs
       previous = nil
       current = File.expand_path(Dir.pwd)
       until !File.directory?(current) || current == previous
-        return true if File.exist?(File.join(current, 'Gemfile'))
+        return true if File.exist?(File.join(current, "Gemfile"))
 
         previous = current
-        current = File.expand_path('..', current)
+        current = File.expand_path("..", current)
       end
 
       false
     end
 
     def with_ruby_binary(command)
-      WINDOWS ? [RUBY_BINARY, '--', command] : [command]
+      WINDOWS ? [RUBY_BINARY, "--", command] : [command]
     end
 
     def now
@@ -93,4 +93,4 @@ module ParallelSpecs
   end
 end
 
-require 'parallel_specs/railtie' if defined?(Rails::Railtie)
+require "parallel_specs/railtie" if defined?(Rails::Railtie)

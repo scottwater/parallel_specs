@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'fileutils'
-require 'rspec/core'
-require 'rspec/core/formatters/base_text_formatter'
+require "fileutils"
+require "rspec/core"
+require "rspec/core/formatters/base_text_formatter"
 
 module ParallelSpecs
   module RSpec
@@ -17,11 +17,11 @@ class ParallelSpecs::RSpec::LoggerBase < RSpec::Core::Formatters::BaseTextFormat
     case @output
     when String
       FileUtils.mkdir_p(File.dirname(@output))
-      File.open(@output, 'w') {}
-      @output = File.open(@output, 'a')
+      File.open(@output, "w") {}
+      @output = File.open(@output, "a")
     when File
       @output.close
-      @output = File.open(@output.path, 'a')
+      @output = File.open(@output.path, "a")
     end
   end
 

@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-require 'spec_helper'
+require "spec_helper"
 
 RSpec.describe ParallelSpecs do
-  describe '.stop_all_processes' do
-    it 'returns false when no pid file is active' do
+  describe ".stop_all_processes" do
+    it "returns false when no pid file is active" do
       expect(described_class.stop_all_processes).to be(false)
     end
 
-    it 'returns false when the pid file has no tracked workers' do
+    it "returns false when the pid file has no tracked workers" do
       described_class.with_pid_file do
         expect(described_class.stop_all_processes).to be(false)
       end
     end
 
-    it 'returns false when no tracked workers could be signaled' do
+    it "returns false when no tracked workers could be signaled" do
       described_class.with_pid_file do
         described_class.pids.add(111)
         allow(Process).to receive(:kill).and_raise(Errno::ESRCH)
@@ -25,7 +25,7 @@ RSpec.describe ParallelSpecs do
       end
     end
 
-    it 'continues interrupting later pids when one pid is stale' do
+    it "continues interrupting later pids when one pid is stale" do
       described_class.with_pid_file do
         described_class.pids.add(111)
         described_class.pids.add(222)
@@ -44,15 +44,15 @@ RSpec.describe ParallelSpecs do
     end
   end
 
-  describe '.determine_number_of_processes' do
-    it 'uses PARALLEL_SPECS_PROCESSORS when no explicit count is provided' do
-      ENV['PARALLEL_SPECS_PROCESSORS'] = '3'
+  describe ".determine_number_of_processes" do
+    it "uses PARALLEL_SPECS_PROCESSORS when no explicit count is provided" do
+      ENV["PARALLEL_SPECS_PROCESSORS"] = "3"
 
       expect(described_class.determine_number_of_processes(nil)).to eq(3)
     end
 
-    it 'prefers the explicit count over PARALLEL_SPECS_PROCESSORS' do
-      ENV['PARALLEL_SPECS_PROCESSORS'] = '3'
+    it "prefers the explicit count over PARALLEL_SPECS_PROCESSORS" do
+      ENV["PARALLEL_SPECS_PROCESSORS"] = "3"
 
       expect(described_class.determine_number_of_processes(2)).to eq(2)
     end

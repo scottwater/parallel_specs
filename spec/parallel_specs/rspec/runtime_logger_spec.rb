@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
-require 'spec_helper'
+require "spec_helper"
 
 RSpec.describe ParallelSpecs::RSpec::RuntimeLogger do
   before do
-    ENV['TEST_ENV_NUMBER'] = ''
+    ENV["TEST_ENV_NUMBER"] = ""
   end
 
   def log_for_a_file
-    Tempfile.open('runtime') do |temp|
+    Tempfile.open("runtime") do |temp|
       temp.close
-      file = File.open(temp.path, 'w')
+      file = File.open(temp.path, "w")
       logger = described_class.new(file)
 
       example = double(group: double(file_path: "#{Dir.pwd}/spec/foo_spec.rb"))
@@ -22,12 +22,12 @@ RSpec.describe ParallelSpecs::RSpec::RuntimeLogger do
     end
   end
 
-  it 'logs runtime with relative paths' do
+  it "logs runtime with relative paths" do
     expect(log_for_a_file).to match(%r{^spec/foo_spec.rb:[-.e\d]+$})
   end
 
-  it 'does not log when not running in parallel' do
-    ENV.delete('TEST_ENV_NUMBER')
-    expect(log_for_a_file).to eq('')
+  it "does not log when not running in parallel" do
+    ENV.delete("TEST_ENV_NUMBER")
+    expect(log_for_a_file).to eq("")
   end
 end

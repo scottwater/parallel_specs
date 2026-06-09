@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'parallel_specs'
-require 'shellwords'
+require "parallel_specs"
+require "shellwords"
 
 module ParallelSpecs
   module Test
@@ -37,13 +37,13 @@ module ParallelSpecs
             rescue RuntimeLogParseError => e
               warn "parallel_specs: unable to use runtime log #{runtime_log_path(options)}: #{e.message}; falling back to filesize grouping"
               known_runtimes = {}
-            rescue StandardError => e
+            rescue => e
               warn "parallel_specs: unable to load runtime log #{runtime_log_path(options)}: #{e.class}: #{e.message}"
               raise
             end
 
             if known_runtimes.size * 1.5 > tests.size
-              puts 'Using recorded test runtime'
+              puts "Using recorded test runtime"
               sort_by_runtime(tests, known_runtimes)
             else
               sort_by_filesize(tests)
@@ -57,13 +57,13 @@ module ParallelSpecs
 
         def execute_command(cmd, process_number, num_processes, options)
           env = {
-            'TEST_ENV_NUMBER' => test_env_number(process_number),
-            'PARALLEL_SPECS_GROUPS' => num_processes.to_s,
-            'PARALLEL_SPECS_PID_FILE' => ParallelSpecs.pid_file_path
+            "TEST_ENV_NUMBER" => test_env_number(process_number),
+            "PARALLEL_SPECS_GROUPS" => num_processes.to_s,
+            "PARALLEL_SPECS_PID_FILE" => ParallelSpecs.pid_file_path
           }
 
           if (dashboard_event_files = options[:dashboard_event_files])
-            env['PARALLEL_SPECS_DASHBOARD_EVENT_LOG'] = dashboard_event_files.fetch(process_number)
+            env["PARALLEL_SPECS_DASHBOARD_EVENT_LOG"] = dashboard_event_files.fetch(process_number)
           end
 
           execute_command_and_capture_output(env, cmd, options)
@@ -88,13 +88,13 @@ module ParallelSpecs
             1
           end
 
-          { env: env, stdout: output, exit_status: exit_status, command: cmd, seed: seed_from(output) }
+          {env: env, stdout: output, exit_status: exit_status, command: cmd, seed: seed_from(output)}
         end
 
         def print_command(command, env = {})
-          env_string = rerun_env(env).map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(' ')
+          env_string = rerun_env(env).map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(" ")
           command_string = Shellwords.shelljoin(command)
-          puts [env_string, command_string].reject(&:empty?).join(' ')
+          puts [env_string, command_string].reject(&:empty?).join(" ")
         end
 
         def rerun_command(command, seed: nil)
@@ -102,24 +102,24 @@ module ParallelSpecs
         end
 
         def command_with_seed(command, seed)
-          [*remove_command_arguments(command, '--seed'), '--seed', seed]
+          [*remove_command_arguments(command, "--seed"), "--seed", seed]
         end
 
         def find_results(test_output)
           test_output.lines.filter_map do |line|
-            line = line.chomp.gsub(/\e\[\d+m/, '')
+            line = line.chomp.gsub(/\e\[\d+m/, "")
             line if line_is_result?(line)
           end
         end
 
         def summarize_results(results)
-          sum_up_results(results).sort.map { |word, count| "#{count} #{word}#{'s' if count != 1}" }.join(', ')
+          sum_up_results(results).sort.map { |word, count| "#{count} #{word}#{"s" if count != 1}" }.join(", ")
         end
 
         protected
 
         def capture_output(out, dashboard)
-          result = +''
+          result = +""
           begin
             loop do
               chunk = out.readpartial(1_000_000)
@@ -161,7 +161,7 @@ module ParallelSpecs
           File.read(path).split("\n").each_with_index.each_with_object({}) do |(line, index), times|
             next if line.empty?
 
-            test, separator, time = line.rpartition(':')
+            test, separator, time = line.rpartition(":")
             raise RuntimeLogParseError, "Invalid runtime log line #{index + 1} in #{path}: #{line.inspect}" if separator.empty? || test.empty? || time.empty?
 
             times[test] = Float(time) if tests.include?(test)
@@ -182,7 +182,7 @@ module ParallelSpecs
         def find_tests(tests, options = {})
           tests.flat_map do |file_or_folder|
             if File.directory?(file_or_folder)
-              filter_files(Dir[File.join(file_or_folder, '**/*_spec.rb')].uniq.sort, options)
+              filter_files(Dir[File.join(file_or_folder, "**/*_spec.rb")].uniq.sort, options)
             else
               filter_files([file_or_folder], options)
             end
@@ -213,15 +213,15 @@ module ParallelSpecs
         end
 
         def rerun_env(env)
-          env.slice('TEST_ENV_NUMBER', 'PARALLEL_SPECS_GROUPS').reject { |_key, value| value.to_s.empty? }
+          env.slice("TEST_ENV_NUMBER", "PARALLEL_SPECS_GROUPS").reject { |_key, value| value.to_s.empty? }
         end
 
         def test_env_number(process_number)
-          process_number.zero? ? '' : (process_number + 1).to_s
+          process_number.zero? ? "" : (process_number + 1).to_s
         end
 
         def sum_up_results(results)
-          results.join(' ').gsub(/s\b/, '').scan(/(\d+) (\w+)/).each_with_object(Hash.new(0)) do |(number, word), sum|
+          results.join(" ").gsub(/s\b/, "").scan(/(\d+) (\w+)/).each_with_object(Hash.new(0)) do |(number, word), sum|
             sum[word] += number.to_i
           end
         end

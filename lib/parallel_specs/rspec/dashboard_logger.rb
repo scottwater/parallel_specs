@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require 'fileutils'
-require 'json'
-require 'rspec/core'
-require 'rspec/core/formatters/base_text_formatter'
+require "fileutils"
+require "json"
+require "rspec/core"
+require "rspec/core/formatters/base_text_formatter"
 
 module ParallelSpecs
   module RSpec
@@ -23,32 +23,32 @@ class ParallelSpecs::RSpec::DashboardLogger < RSpec::Core::Formatters::BaseTextF
   def initialize(output)
     super
 
-    path = ENV['PARALLEL_SPECS_DASHBOARD_EVENT_LOG']
-    raise 'A dashboard event log env var is required for DashboardLogger' if path.to_s.empty?
+    path = ENV["PARALLEL_SPECS_DASHBOARD_EVENT_LOG"]
+    raise "A dashboard event log env var is required for DashboardLogger" if path.to_s.empty?
 
     FileUtils.mkdir_p(File.dirname(path))
-    @event_output = File.open(path, 'a')
+    @event_output = File.open(path, "a")
     @event_output.sync = true
   end
 
   def start(notification)
-    emit(event: 'start', total: notification.count)
+    emit(event: "start", total: notification.count)
   end
 
   def example_started(notification)
-    emit_example('example_started', notification)
+    emit_example("example_started", notification)
   end
 
   def example_passed(notification)
-    emit_example('example_passed', notification)
+    emit_example("example_passed", notification)
   end
 
   def example_pending(notification)
-    emit_example('example_pending', notification)
+    emit_example("example_pending", notification)
   end
 
   def example_failed(notification)
-    emit_example('example_failed', notification)
+    emit_example("example_failed", notification)
   end
 
   def close(*)

@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
-require 'optparse'
-require 'fileutils'
-require 'pathname'
-require 'shellwords'
-require 'tmpdir'
+require "optparse"
+require "fileutils"
+require "pathname"
+require "shellwords"
+require "tmpdir"
 
-require 'parallel_specs'
-require 'parallel_specs/cli/dashboard'
-require 'parallel_specs/rspec/runner'
+require "parallel_specs"
+require "parallel_specs/cli/dashboard"
+require "parallel_specs/rspec/runner"
 
 module ParallelSpecs
   class CLI
@@ -20,13 +20,13 @@ module ParallelSpecs
     end
 
     def run(argv)
-      Signal.trap('INT') { handle_interrupt }
+      Signal.trap("INT") { handle_interrupt }
 
       options = parse_options!(argv)
-      ENV['DISABLE_SPRING'] ||= '1'
+      ENV["DISABLE_SPRING"] ||= "1"
 
       num_processes = ParallelSpecs.determine_number_of_processes(options[:count])
-      abort 'Process count must be greater than 0' unless num_processes.positive?
+      abort "Process count must be greater than 0" unless num_processes.positive?
 
       run_tests_in_parallel(num_processes, options)
     end
@@ -140,7 +140,7 @@ module ParallelSpecs
       runtime_log = options[:runtime_log] || @runner.runtime_log
       should_merge_runtime_logs = false
 
-      Dir.mktmpdir('parallel_specs-runtime') do |dir|
+      Dir.mktmpdir("parallel_specs-runtime") do |dir|
         runtime_log_files = groups.each_index.to_h do |index|
           [index, File.join(dir, "worker-#{index + 1}.log")]
         end
@@ -165,13 +165,13 @@ module ParallelSpecs
 
       missing_logs = runtime_log_files.values.reject { |path| File.file?(path) }
       unless missing_logs.empty?
-        warn "parallel_specs: not updating runtime log #{runtime_log}; missing worker runtime logs: #{missing_logs.join(', ')}"
+        warn "parallel_specs: not updating runtime log #{runtime_log}; missing worker runtime logs: #{missing_logs.join(", ")}"
         return false
       end
 
       FileUtils.mkdir_p(File.dirname(runtime_log))
       temporary_runtime_log = "#{runtime_log}.#{Process.pid}.tmp"
-      File.open(temporary_runtime_log, 'w') do |output|
+      File.open(temporary_runtime_log, "w") do |output|
         runtime_log_files.each_value do |path|
           File.foreach(path) { |line| output.write(line) }
         end
@@ -185,10 +185,10 @@ module ParallelSpecs
     def with_dashboard(groups, options)
       return yield unless options[:dashboard]
 
-      Dir.mktmpdir('parallel_specs-dashboard') do |dir|
+      Dir.mktmpdir("parallel_specs-dashboard") do |dir|
         event_files = groups.each_index.to_h do |index|
           path = File.join(dir, "worker-#{index + 1}.jsonl")
-          File.write(path, '')
+          File.write(path, "")
           [index, path]
         end
 
@@ -219,8 +219,8 @@ module ParallelSpecs
 
       puts "\nFailed worker output:\n"
       failures.each do |result|
-        worker_label = result.dig(:env, 'TEST_ENV_NUMBER')
-        worker_label = '1' if worker_label.to_s.empty?
+        worker_label = result.dig(:env, "TEST_ENV_NUMBER")
+        worker_label = "1" if worker_label.to_s.empty?
         puts "--- worker #{worker_label} ---"
         puts result[:stdout]
       end
@@ -231,7 +231,7 @@ module ParallelSpecs
       return if failures.empty?
 
       rerun_commands = failures.map do |result|
-        { result: result, command: @runner.rerun_command(result[:command], seed: result[:seed]) }
+        {result: result, command: @runner.rerun_command(result[:command], seed: result[:seed])}
       end
 
       if print_full_rerun_commands?(rerun_commands)
@@ -245,7 +245,7 @@ module ParallelSpecs
     end
 
     def print_full_rerun_commands?(rerun_commands)
-      return true if truthy_env?('PARALLEL_SPECS_FULL_RERUN_COMMANDS')
+      return true if truthy_env?("PARALLEL_SPECS_FULL_RERUN_COMMANDS")
 
       rerun_commands.all? do |entry|
         rerun_command_spec_file_count(entry[:command]) <= rerun_command_spec_file_limit &&
@@ -257,35 +257,35 @@ module ParallelSpecs
       total_spec_files = rerun_commands.sum { |entry| rerun_command_spec_file_count(entry[:command]) }
 
       puts "\nFull worker rerun commands omitted to keep failure output readable."
-      puts "#{pluralize(rerun_commands.size, 'failed worker')} included #{pluralize(total_spec_files, @runner.test_file_name)}."
-      puts 'RSpec failure output above includes failed example locations.'
-      puts 'Set PARALLEL_SPECS_FULL_RERUN_COMMANDS=1 to print full worker rerun commands.'
+      puts "#{pluralize(rerun_commands.size, "failed worker")} included #{pluralize(total_spec_files, @runner.test_file_name)}."
+      puts "RSpec failure output above includes failed example locations."
+      puts "Set PARALLEL_SPECS_FULL_RERUN_COMMANDS=1 to print full worker rerun commands."
 
       rerun_commands.each do |entry|
         result = entry[:result]
-        worker_label = result.dig(:env, 'TEST_ENV_NUMBER')
-        worker_label = '1' if worker_label.to_s.empty?
-        seed = result[:seed] ? ", seed #{result[:seed]}" : ''
+        worker_label = result.dig(:env, "TEST_ENV_NUMBER")
+        worker_label = "1" if worker_label.to_s.empty?
+        seed = result[:seed] ? ", seed #{result[:seed]}" : ""
         puts "worker #{worker_label}: #{pluralize(rerun_command_spec_file_count(entry[:command]), @runner.test_file_name)}#{seed}"
       end
     end
 
     def rerun_command_spec_file_count(command)
-      command.count { |arg| arg.end_with?('_spec.rb') }
+      command.count { |arg| arg.end_with?("_spec.rb") }
     end
 
     def rerun_command_length(command, env)
-      rerun_env = env.slice('TEST_ENV_NUMBER', 'PARALLEL_SPECS_GROUPS').reject { |_key, value| value.to_s.empty? }
-      env_string = rerun_env.map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(' ')
-      [env_string, Shellwords.shelljoin(command)].reject(&:empty?).join(' ').length
+      rerun_env = env.slice("TEST_ENV_NUMBER", "PARALLEL_SPECS_GROUPS").reject { |_key, value| value.to_s.empty? }
+      env_string = rerun_env.map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(" ")
+      [env_string, Shellwords.shelljoin(command)].reject(&:empty?).join(" ").length
     end
 
     def rerun_command_spec_file_limit
-      positive_integer_env('PARALLEL_SPECS_RERUN_COMMAND_SPEC_FILE_LIMIT') || DEFAULT_RERUN_COMMAND_SPEC_FILE_LIMIT
+      positive_integer_env("PARALLEL_SPECS_RERUN_COMMAND_SPEC_FILE_LIMIT") || DEFAULT_RERUN_COMMAND_SPEC_FILE_LIMIT
     end
 
     def rerun_command_char_limit
-      positive_integer_env('PARALLEL_SPECS_RERUN_COMMAND_CHAR_LIMIT') || DEFAULT_RERUN_COMMAND_CHAR_LIMIT
+      positive_integer_env("PARALLEL_SPECS_RERUN_COMMAND_CHAR_LIMIT") || DEFAULT_RERUN_COMMAND_CHAR_LIMIT
     end
 
     def positive_integer_env(name)
@@ -295,14 +295,14 @@ module ParallelSpecs
     end
 
     def truthy_env?(name)
-      %w[1 true yes].include?(ENV.fetch(name, '').downcase)
+      %w[1 true yes].include?(ENV.fetch(name, "").downcase)
     end
 
     def report_number_of_tests(groups)
       num_processes = groups.size
       num_tests = groups.map(&:size).sum
       tests_per_process = num_processes.zero? ? 0 : num_tests / num_processes
-      puts "#{pluralize(num_processes, 'process')} for #{pluralize(num_tests, @runner.test_file_name)}, ~ #{pluralize(tests_per_process, @runner.test_file_name)} per process"
+      puts "#{pluralize(num_processes, "process")} for #{pluralize(num_tests, @runner.test_file_name)}, ~ #{pluralize(tests_per_process, @runner.test_file_name)} per process"
     end
 
     def any_test_failed?(test_results)
@@ -315,7 +315,7 @@ module ParallelSpecs
 
     def parse_options!(argv)
       newline_padding = 33
-      options = { dashboard: true }
+      options = {dashboard: true}
 
       OptionParser.new do |opts|
         opts.banner = <<~BANNER
@@ -330,27 +330,33 @@ module ParallelSpecs
           Options are:
         BANNER
 
-        opts.on('-n PROCESSES', Integer, 'How many processes to use, default: available CPUs') { |n| options[:count] = n }
-        opts.on('-o', '--test-options OPTIONS', 'Pass these options to rspec') { |arg| options[:test_options] = Shellwords.shellsplit(arg) }
-        opts.on('--group-by TYPE', heredoc(<<~TEXT, newline_padding)) { |type| options[:group_by] = type.to_sym }
+        opts.on("-n PROCESSES", Integer, "How many processes to use, default: available CPUs") { |n| options[:count] = n }
+        opts.on("-o", "--test-options OPTIONS", "Pass these options to rspec") { |arg| options[:test_options] = Shellwords.shellsplit(arg) }
+        opts.on("--group-by TYPE", heredoc(<<~TEXT, newline_padding)) { |type| options[:group_by] = type.to_sym }
           group specs by:
           found - order of finding files
           filesize - by size of the file
           runtime - info from runtime log
           default - runtime when runtime log is filled otherwise filesize
         TEXT
-        opts.on('--dashboard-mode MODE', %w[interactive plain], 'Dashboard mode: interactive or plain') { |mode| options[:dashboard_mode] = mode.to_sym }
-        opts.on('--plain-dashboard', 'Use the plain text dashboard output') { options[:dashboard_mode] = :plain }
-        opts.on('--plain', 'Use the plain text dashboard output') { options[:dashboard_mode] = :plain }
-        opts.on('--pattern PATTERN', 'Only run spec files matching PATTERN') { |pattern| options[:pattern] = Regexp.new(pattern) }
-        opts.on('--exclude-pattern PATTERN', 'Skip spec files matching PATTERN') { |pattern| options[:exclude_pattern] = Regexp.new(pattern) }
-        opts.on('--runtime-log PATH', 'Read spec runtimes from PATH; with --record-runtime, write the completed run there') { |path| options[:runtime_log] = path }
-        opts.on('--allowed-missing COUNT', Integer, 'Allowed percentage of missing runtimes (default = 50)') { |percent| options[:allowed_missing_percent] = percent }
-        opts.on('--unknown-runtime SECONDS', Float, 'Use given number as unknown runtime (otherwise use average time)') { |time| options[:unknown_runtime] = time }
-        opts.on('--record-runtime', 'Record runtimes and replace the runtime log only after a successful complete run') { options[:record_runtime] = true }
-        opts.on('--fail-fast', 'Stop remaining workers after one worker fails') { options[:fail_fast] = true }
-        opts.on('-v', '--version', 'Show version') { puts ParallelSpecs::VERSION; exit 0 }
-        opts.on('-h', '--help', 'Show this help') { puts opts; exit 0 }
+        opts.on("--dashboard-mode MODE", %w[interactive plain], "Dashboard mode: interactive or plain") { |mode| options[:dashboard_mode] = mode.to_sym }
+        opts.on("--plain-dashboard", "Use the plain text dashboard output") { options[:dashboard_mode] = :plain }
+        opts.on("--plain", "Use the plain text dashboard output") { options[:dashboard_mode] = :plain }
+        opts.on("--pattern PATTERN", "Only run spec files matching PATTERN") { |pattern| options[:pattern] = Regexp.new(pattern) }
+        opts.on("--exclude-pattern PATTERN", "Skip spec files matching PATTERN") { |pattern| options[:exclude_pattern] = Regexp.new(pattern) }
+        opts.on("--runtime-log PATH", "Read spec runtimes from PATH; with --record-runtime, write the completed run there") { |path| options[:runtime_log] = path }
+        opts.on("--allowed-missing COUNT", Integer, "Allowed percentage of missing runtimes (default = 50)") { |percent| options[:allowed_missing_percent] = percent }
+        opts.on("--unknown-runtime SECONDS", Float, "Use given number as unknown runtime (otherwise use average time)") { |time| options[:unknown_runtime] = time }
+        opts.on("--record-runtime", "Record runtimes and replace the runtime log only after a successful complete run") { options[:record_runtime] = true }
+        opts.on("--fail-fast", "Stop remaining workers after one worker fails") { options[:fail_fast] = true }
+        opts.on("-v", "--version", "Show version") {
+          puts ParallelSpecs::VERSION
+          exit 0
+        }
+        opts.on("-h", "--help", "Show this help") {
+          puts opts
+          exit 0
+        }
       end.parse!(argv)
 
       options[:dashboard] = !options[:record_runtime]
@@ -363,13 +369,13 @@ module ParallelSpecs
     end
 
     def extract_file_paths(argv)
-      dash_index = argv.rindex('--')
+      dash_index = argv.rindex("--")
       file_args_at = (dash_index || -1) + 1
       [argv[file_args_at..], argv[0...(dash_index || 0)]]
     end
 
     def extract_test_options(argv)
-      dash_index = argv.index('--') || -1
+      dash_index = argv.index("--") || -1
       argv[dash_index + 1..]
     end
 
@@ -383,18 +389,18 @@ module ParallelSpecs
 
     def report_time_taken(&block)
       seconds = ParallelSpecs.delta(&block).to_i
-      puts "\nTook #{pluralize(seconds, 'second')}#{detailed_duration(seconds)}"
+      puts "\nTook #{pluralize(seconds, "second")}#{detailed_duration(seconds)}"
     end
 
     def detailed_duration(seconds)
       parts = [seconds / 3600, (seconds % 3600) / 60, seconds % 60].drop_while(&:zero?)
       return if parts.size < 2
 
-      " (#{parts.map { |part| format('%02d', part) }.join(':').sub(/^0/, '')})"
+      " (#{parts.map { |part| format("%02d", part) }.join(":").sub(/^0/, "")})"
     end
 
     def final_fail_message
-      message = 'Specs Failed'
+      message = "Specs Failed"
       use_colors? ? "\e[31m#{message}\e[0m" : message
     end
 
@@ -409,10 +415,10 @@ module ParallelSpecs
     def dashboard_mode(options = {})
       return options[:dashboard_mode] if options[:dashboard_mode]
 
-      override = ENV['PARALLEL_SPECS_DASHBOARD_MODE']
+      override = ENV["PARALLEL_SPECS_DASHBOARD_MODE"]
       return override.to_sym if %w[interactive plain].include?(override)
 
-      if ENV['CI'] || !$stdout.tty?
+      if ENV["CI"] || !$stdout.tty?
         :plain
       else
         :interactive
@@ -423,10 +429,10 @@ module ParallelSpecs
       return yield unless simulate
 
       progress_indicator = Thread.new do
-        interval = Float(ENV['PARALLEL_SPECS_HEARTBEAT_INTERVAL'] || 60)
+        interval = Float(ENV["PARALLEL_SPECS_HEARTBEAT_INTERVAL"] || 60)
         loop do
           sleep interval
-          $stdout.print '.'
+          $stdout.print "."
           $stdout.flush
         end
       end
@@ -437,12 +443,12 @@ module ParallelSpecs
     end
 
     def heredoc(text, newline_padding)
-      text.rstrip.gsub("\n", "\n#{' ' * newline_padding}")
+      text.rstrip.gsub("\n", "\n#{" " * newline_padding}")
     end
 
     def pluralize(number, singular)
       return "1 #{singular}" if number == 1
-      return "#{number} #{singular}es" if singular.end_with?('s', 'sh', 'ch', 'x', 'z')
+      return "#{number} #{singular}es" if singular.end_with?("s", "sh", "ch", "x", "z")
 
       "#{number} #{singular}s"
     end

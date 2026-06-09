@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require 'parallel_specs'
-require 'parallel_specs/rspec/logger_base'
+require "parallel_specs"
+require "parallel_specs/rspec/logger_base"
 
 class ParallelSpecs::RSpec::RuntimeLogger < ParallelSpecs::RSpec::LoggerBase
   RSpec::Core::Formatters.register(self, :example_group_started, :example_group_finished, :start_dump)
@@ -26,18 +26,27 @@ class ParallelSpecs::RSpec::RuntimeLogger < ParallelSpecs::RSpec::LoggerBase
     super if defined?(super)
   end
 
-  def seed(*); end
-  def dump_summary(*); end
-  def dump_failures(*); end
-  def dump_failure(*); end
-  def dump_pending(*); end
+  def seed(*)
+  end
+
+  def dump_summary(*)
+  end
+
+  def dump_failures(*)
+  end
+
+  def dump_failure(*)
+  end
+
+  def dump_pending(*)
+  end
 
   def start_dump(*)
-    return unless ENV['TEST_ENV_NUMBER']
+    return unless ENV["TEST_ENV_NUMBER"]
 
     lock_output do
       @example_times.sort_by(&:last).reverse_each do |file, time|
-        relative_path = file.sub(%r{^#{Regexp.escape(Dir.pwd)}/}, '').sub(%r{^\./}, '')
+        relative_path = file.sub(%r{^#{Regexp.escape(Dir.pwd)}/}, "").sub(%r{^\./}, "")
         @output.puts "#{relative_path}:#{[time, 0].max}"
       end
     end

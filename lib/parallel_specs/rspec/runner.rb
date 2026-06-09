@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'parallel_specs/test/runner'
+require "parallel_specs/test/runner"
 
 module ParallelSpecs
   module RSpec
@@ -16,15 +16,15 @@ module ParallelSpecs
         end
 
         def runtime_log
-          'tmp/parallel_runtime_rspec.log'
+          "tmp/parallel_runtime_rspec.log"
         end
 
         def default_test_folder
-          'spec'
+          "spec"
         end
 
         def test_file_name
-          'spec'
+          "spec"
         end
 
         def line_is_result?(line)
@@ -36,9 +36,9 @@ module ParallelSpecs
           return text unless $stdout.tty?
 
           sums = send(:sum_up_results, results)
-          color_code = if sums['failure'] > 0
+          color_code = if sums["failure"] > 0
             31
-          elsif sums['pending'] > 0
+          elsif sums["pending"] > 0
             33
           else
             32
@@ -52,7 +52,7 @@ module ParallelSpecs
         end
 
         def command_with_seed(command, seed)
-          [*remove_command_arguments(command, '--seed', '--order'), '--seed', seed]
+          [*remove_command_arguments(command, "--seed", "--order"), "--seed", seed]
         end
 
         private
@@ -69,17 +69,17 @@ module ParallelSpecs
         end
 
         def remove_rerun_only_formatters(command)
-          remove_formatter(command, 'ParallelSpecs::RSpec::DashboardLogger')
-            .then { |cmd| remove_formatter(cmd, 'ParallelSpecs::RSpec::RuntimeLogger') }
+          remove_formatter(command, "ParallelSpecs::RSpec::DashboardLogger")
+            .then { |cmd| remove_formatter(cmd, "ParallelSpecs::RSpec::RuntimeLogger") }
         end
 
         def remove_formatter(command, formatter)
           cleaned = []
           index = 0
           while index < command.length
-            if command[index] == '--format' && command[index + 1] == formatter
+            if command[index] == "--format" && command[index + 1] == formatter
               index += 2
-            elsif command[index] == '--out' && command[index - 2] == '--format' && command[index - 1] == formatter
+            elsif command[index] == "--out" && command[index - 2] == "--format" && command[index - 1] == formatter
               index += 2
             else
               cleaned << command[index]
@@ -90,12 +90,12 @@ module ParallelSpecs
         end
 
         def executable
-          if File.exist?('bin/rspec')
-            ParallelSpecs.with_ruby_binary('bin/rspec')
+          if File.exist?("bin/rspec")
+            ParallelSpecs.with_ruby_binary("bin/rspec")
           elsif ParallelSpecs.bundler_enabled?
             %w[bundle exec rspec]
           else
-            ['rspec']
+            ["rspec"]
           end
         end
 
@@ -104,7 +104,7 @@ module ParallelSpecs
         end
 
         def dashboard_formatter(options)
-          ['--format', 'ParallelSpecs::RSpec::DashboardLogger'] if options[:dashboard]
+          ["--format", "ParallelSpecs::RSpec::DashboardLogger"] if options[:dashboard]
         end
 
         def record_runtime_formatters(process_number, options)
@@ -114,7 +114,7 @@ module ParallelSpecs
             options[:runtime_log] || runtime_log
           end
 
-          ['--format', 'progress', '--format', 'ParallelSpecs::RSpec::RuntimeLogger', '--out', runtime_log_path]
+          ["--format", "progress", "--format", "ParallelSpecs::RSpec::RuntimeLogger", "--out", runtime_log_path]
         end
       end
     end

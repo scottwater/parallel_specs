@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'json'
-require 'io/console'
-require 'strscan'
+require "json"
+require "io/console"
+require "strscan"
 
 module ParallelSpecs
   class CLI
@@ -20,7 +20,7 @@ module ParallelSpecs
         :exit_status
       )
 
-      SPINNER = ['-', '\\', '|', '/'].freeze
+      SPINNER = ["-", "\\", "|", "/"].freeze
       PROGRESS_BAR_WIDTH = 24
       REFRESH_INTERVAL = 0.1
 
@@ -71,7 +71,7 @@ module ParallelSpecs
                 render if @dirty
               end
             end
-          rescue StandardError => e
+          rescue => e
             @running = false
             warn "parallel_specs: dashboard refresh failed while polling #{event_file_context}: #{e.class}: #{e.message}"
           end
@@ -85,7 +85,7 @@ module ParallelSpecs
         @mutex.synchronize do
           begin
             poll_once
-          rescue StandardError => e
+          rescue => e
             warn "parallel_specs: dashboard final poll failed while polling #{event_file_context}: #{e.class}: #{e.message}"
           end
           render
@@ -116,20 +116,20 @@ module ParallelSpecs
         worker = @workers.fetch(process_number)
         worker.started_at ||= @now.call
 
-        case event.fetch('event')
-        when 'start'
-          worker.example_total = event['total']
-        when 'example_started'
-          worker.current_example = event['example']
-        when 'example_passed'
+        case event.fetch("event")
+        when "start"
+          worker.example_total = event["total"]
+        when "example_started"
+          worker.current_example = event["example"]
+        when "example_passed"
           worker.passed += 1
-          worker.current_example = event['example']
-        when 'example_pending'
+          worker.current_example = event["example"]
+        when "example_pending"
           worker.pending += 1
-          worker.current_example = event['example']
-        when 'example_failed'
+          worker.current_example = event["example"]
+        when "example_failed"
           worker.failed += 1
-          worker.current_example = event['example']
+          worker.current_example = event["example"]
         end
 
         @dirty = true
@@ -139,7 +139,7 @@ module ParallelSpecs
         @event_files.each do |process_number, path|
           next unless File.exist?(path)
 
-          File.open(path, 'r') do |file|
+          File.open(path, "r") do |file|
             file.seek(@event_offsets[process_number])
             chunk = file.read.to_s
             @event_offsets[process_number] = file.pos
@@ -174,7 +174,7 @@ module ParallelSpecs
       end
 
       def event_file_context
-        @event_files.map { |process_number, path| "worker #{process_number + 1}=#{path}" }.join(', ')
+        @event_files.map { |process_number, path| "worker #{process_number + 1}=#{path}" }.join(", ")
       end
 
       def render
@@ -215,12 +215,12 @@ module ParallelSpecs
           "examples: #{examples_seen}"
         else
           summary = "examples: #{examples_seen}/#{total_examples.sum}"
-          summary += ' known' unless total_examples.size == workers.size
+          summary += " known" unless total_examples.size == workers.size
           summary
         end
 
         truncate(
-          [example_summary, "elapsed: #{format_duration(elapsed_seconds)}"].join(' | '),
+          [example_summary, "elapsed: #{format_duration(elapsed_seconds)}"].join(" | "),
           terminal_width
         )
       end
@@ -247,14 +247,14 @@ module ParallelSpecs
 
       def progress_summary_for(worker)
         if worker.example_total
-          format('%<completed>d/%<total>d', completed: examples_seen_for(worker), total: worker.example_total)
+          format("%<completed>d/%<total>d", completed: examples_seen_for(worker), total: worker.example_total)
         else
-          format('files:%<count>3d', count: worker.files_count)
+          format("files:%<count>3d", count: worker.files_count)
         end
       end
 
       def progress_bar_for(worker)
-        return "[#{'.' * PROGRESS_BAR_WIDTH}]" unless worker.example_total
+        return "[#{"." * PROGRESS_BAR_WIDTH}]" unless worker.example_total
 
         total = worker.example_total
         completed = [examples_seen_for(worker), total].min
@@ -264,7 +264,7 @@ module ParallelSpecs
           [(completed.to_f / total * PROGRESS_BAR_WIDTH).round, PROGRESS_BAR_WIDTH].min
         end
         empty = PROGRESS_BAR_WIDTH - filled
-        "[#{'#' * filled}#{'-' * empty}]"
+        "[#{"#" * filled}#{"-" * empty}]"
       end
 
       def examples_seen_for(worker)
@@ -289,11 +289,11 @@ module ParallelSpecs
 
       def status_text_for(worker)
         case status_for(worker)
-        when :queued then '· queued'
+        when :queued then "· queued"
         when :running then "#{SPINNER[@spinner_index % SPINNER.length]} running"
-        when :failing then '! failing'
-        when :failed then '✗ failed'
-        when :passed then '✓ passed'
+        when :failing then "! failing"
+        when :failed then "✗ failed"
+        when :passed then "✓ passed"
         end
       end
 
@@ -328,9 +328,9 @@ module ParallelSpecs
         remaining_seconds = seconds % 60
 
         if hours > 0
-          format('%<hours>d:%<minutes>02d:%<seconds>02d', hours: hours, minutes: minutes, seconds: remaining_seconds)
+          format("%<hours>d:%<minutes>02d:%<seconds>02d", hours: hours, minutes: minutes, seconds: remaining_seconds)
         else
-          format('%<minutes>02d:%<seconds>02d', minutes: minutes, seconds: remaining_seconds)
+          format("%<minutes>02d:%<seconds>02d", minutes: minutes, seconds: remaining_seconds)
         end
       end
 
@@ -347,7 +347,7 @@ module ParallelSpecs
         end
 
         [width.to_i - 1, 1].max
-      rescue StandardError
+      rescue
         119
       end
 
@@ -361,11 +361,11 @@ module ParallelSpecs
       end
 
       def truncate(text, max_length)
-        return '' if max_length <= 0
+        return "" if max_length <= 0
         return text if visible_length(text) <= max_length
-        return '…' if max_length <= 1
+        return "…" if max_length <= 1
 
-        truncated = +''
+        truncated = +""
         visible_count = 0
         scanner = StringScanner.new(text)
 
@@ -378,13 +378,13 @@ module ParallelSpecs
           end
         end
 
-        truncated << '…'
+        truncated << "…"
         truncated << "\e[0m" if text.include?("\e[")
         truncated
       end
 
       def visible_length(text)
-        text.gsub(/\e\[[\d;]*m/, '').length
+        text.gsub(/\e\[[\d;]*m/, "").length
       end
     end
   end
