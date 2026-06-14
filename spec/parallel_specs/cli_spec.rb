@@ -53,6 +53,20 @@ RSpec.describe ParallelSpecs::CLI do
         test_options: ["--tag", "~type:system"]
       )
     end
+
+    it "keeps file args before extra rspec args passed after --" do
+      expect(call(["spec", "--", "--tag", "type:unit"])).to include(
+        files: ["spec"],
+        test_options: ["--tag", "type:unit"]
+      )
+    end
+
+    it "uses the default spec folder when only extra rspec args are passed after --" do
+      expect(call(["--", "--tag", "type:unit"])).to include(
+        files: ["spec"],
+        test_options: ["--tag", "type:unit"]
+      )
+    end
   end
 
   describe "#handle_interrupt" do

@@ -318,6 +318,7 @@ module ParallelSpecs
     def parse_options!(argv)
       newline_padding = 33
       options = {dashboard: true}
+      cli_argv, rspec_argv = split_rspec_args(argv)
 
       OptionParser.new do |opts|
         opts.banner = <<~BANNER
@@ -359,30 +360,33 @@ module ParallelSpecs
           puts opts
           exit 0
         }
-      end.parse!(argv)
+      end.parse!(cli_argv)
 
       options[:dashboard] = !options[:record_runtime]
 
-      files, remaining = extract_file_paths(argv)
+      files, remaining = extract_file_paths(cli_argv, rspec_argv)
       files = [@runner.default_test_folder] if files.empty?
       options[:files] = files.map { |file_path| Pathname.new(file_path).cleanpath.to_s }
       append_test_options(options, remaining)
       options
     end
 
-    def extract_file_paths(argv)
-      dash_index = argv.rindex("--")
-      file_args_at = (dash_index || -1) + 1
-      [argv[file_args_at..], argv[0...(dash_index || 0)]]
+    def split_rspec_args(argv)
+      dash_index = argv.index("--")
+      return [argv, []] unless dash_index
+
+      [argv[0...dash_index], argv[(dash_index + 1)..]]
     end
 
-    def extract_test_options(argv)
-      dash_index = argv.index("--") || -1
-      argv[dash_index + 1..]
+    def extract_file_paths(argv, rspec_argv)
+      dash_index = rspec_argv.index("--")
+      return [argv, rspec_argv] unless dash_index
+
+      [argv + rspec_argv[(dash_index + 1)..], rspec_argv[0...dash_index]]
     end
 
     def append_test_options(options, argv)
-      new_opts = extract_test_options(argv)
+      new_opts = argv
       return if new_opts.empty?
 
       options[:test_options] ||= []
