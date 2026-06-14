@@ -90,6 +90,36 @@ RSpec.describe ParallelSpecs::CLI::Dashboard do
     expect(captured_stderr.string).to match(/dashboard refresh failed while polling worker 1=.*bad json/)
   end
 
+  it "keeps refreshing after a malformed event line" do
+    dashboard = described_class.new(
+      groups: [["a_spec.rb", "b_spec.rb"], ["c_spec.rb"]],
+      event_files: event_files,
+      output: output,
+      use_colors: false,
+      mode: mode,
+      now: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) },
+      width: 200,
+      refresh_interval: 0.01
+    )
+    original_stderr = $stderr
+    captured_stderr = StringIO.new
+    $stderr = captured_stderr
+    begin
+      dashboard.start
+      File.open(event_file_1, "a") { |file| file.puts("not-json") }
+      sleep 0.05
+      File.open(event_file_1, "a") { |file| file.puts(%({"event":"example_passed","example":"later"})) }
+      sleep 0.05
+
+      expect(dashboard.workers.first.passed).to eq(1)
+    ensure
+      dashboard.stop
+      $stderr = original_stderr
+    end
+
+    expect(captured_stderr.string).to match(/dashboard event ignored while polling worker 1=.*JSON::ParserError/)
+  end
+
   it "polls jsonl event files" do
     File.write(event_file_1, <<~JSONL)
       {"event":"start","total":2}

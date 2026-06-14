@@ -152,7 +152,11 @@ module ParallelSpecs
             lines.each do |line|
               next if line.empty?
 
-              process_event(process_number, JSON.parse(line))
+              begin
+                process_event(process_number, JSON.parse(line))
+              rescue JSON::ParserError, KeyError => e
+                warn "parallel_specs: dashboard event ignored while polling worker #{process_number + 1}=#{path}: #{e.class}: #{e.message}"
+              end
             end
           end
         end
