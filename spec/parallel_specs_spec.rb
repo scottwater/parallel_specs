@@ -56,5 +56,13 @@ RSpec.describe ParallelSpecs do
 
       expect(described_class.determine_number_of_processes(2)).to eq(2)
     end
+
+    it "rejects invalid PARALLEL_SPECS_PROCESSORS values" do
+      ENV["PARALLEL_SPECS_PROCESSORS"] = "abc"
+
+      expect do
+        described_class.determine_number_of_processes(nil)
+      end.to raise_error(ParallelSpecs::ConfigurationError, "PARALLEL_SPECS_PROCESSORS must be an integer")
+    end
   end
 end

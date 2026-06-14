@@ -5,6 +5,7 @@ require "rbconfig"
 require "tempfile"
 
 module ParallelSpecs
+  ConfigurationError = Class.new(ArgumentError)
   WINDOWS = (RbConfig::CONFIG["host_os"] =~ /cygwin|mswin|mingw|bccwin|wince|emx/)
   RUBY_BINARY = File.join(RbConfig::CONFIG["bindir"], RbConfig::CONFIG["ruby_install_name"])
 
@@ -15,11 +16,15 @@ module ParallelSpecs
 
   class << self
     def determine_number_of_processes(count)
-      Integer([
-        count,
-        ENV["PARALLEL_SPECS_PROCESSORS"],
-        Parallel.processor_count
-      ].detect { |value| !value.to_s.strip.empty? })
+      source, value = [
+        ["process count", count],
+        ["PARALLEL_SPECS_PROCESSORS", ENV["PARALLEL_SPECS_PROCESSORS"]],
+        ["processor count", Parallel.processor_count]
+      ].detect { |_source, raw_value| !raw_value.to_s.strip.empty? }
+
+      Integer(value)
+    rescue ArgumentError
+      raise ConfigurationError, "#{source} must be an integer"
     end
 
     def with_pid_file

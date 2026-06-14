@@ -58,6 +58,19 @@ RSpec.describe "parallel_specs integration" do
     end
   end
 
+  it "reports invalid PARALLEL_SPECS_PROCESSORS without a backtrace" do
+    Dir.mktmpdir do |dir|
+      write(dir, "spec/a_spec.rb", "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
+
+      output, status = run_specs(dir, "spec", env: {"PARALLEL_SPECS_PROCESSORS" => "abc"})
+
+      expect(status.exitstatus).to eq(1), output
+      expect(output).to include("PARALLEL_SPECS_PROCESSORS must be an integer")
+      expect(output).not_to include("ArgumentError")
+      expect(output).not_to include("parallel_specs.rb")
+    end
+  end
+
   it "prints a plain dashboard summary in non-tty mode" do
     Dir.mktmpdir do |dir|
       write(dir, "spec/a_spec.rb", "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
