@@ -9,6 +9,7 @@ module ParallelSpecs
       RuntimeLogTooSmallError = Class.new(StandardError)
       RuntimeLogParseError = Class.new(StandardError)
       MissingTestFileError = Class.new(ArgumentError)
+      OUTPUT_MUTEX = Mutex.new
 
       class << self
         def tests_in_groups(tests, num_groups, options = {})
@@ -126,13 +127,15 @@ module ParallelSpecs
               chunk = out.readpartial(1_000_000)
               chunk = chunk.force_encoding(Encoding.default_internal) if Encoding.default_internal
               result << chunk
-              next if dashboard
-
-              $stdout.print(chunk)
-              $stdout.flush
             end
           rescue EOFError
             nil
+          end
+          unless dashboard
+            OUTPUT_MUTEX.synchronize do
+              $stdout.print(result)
+              $stdout.flush
+            end
           end
           result
         end

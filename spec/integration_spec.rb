@@ -197,6 +197,40 @@ RSpec.describe "parallel_specs integration" do
     end
   end
 
+  it "prints each record-runtime worker output without interleaving chunks" do
+    Dir.mktmpdir do |dir|
+      write(dir, "spec/a_spec.rb", "x")
+      write(dir, "spec/b_spec.rb", "yy")
+      write(dir, "bin/rspec", <<~RUBY)
+        #!/usr/bin/env ruby
+        output_path = ARGV.each_cons(2).find { |arg, _value| arg == "--out" }&.last
+        specs = ARGV.grep(/_spec\\.rb\\z/)
+        File.write(output_path, specs.map { |spec| "\#{spec}:0.1\\n" }.join) if output_path
+
+        if ENV["TEST_ENV_NUMBER"].to_s.empty?
+          print "A"
+          $stdout.flush
+          sleep 0.05
+          print "B\\n"
+        else
+          sleep 0.02
+          print "1"
+          $stdout.flush
+          sleep 0.05
+          print "2\\n"
+        end
+      RUBY
+      make_executable(dir, "bin/rspec")
+
+      output, status = run_specs(dir, "--record-runtime", "--runtime-log", "tmp/custom_runtime.log", "-n", "2", "spec")
+
+      expect(status.exitstatus).to eq(0), output
+      expect(output).to include("AB\n")
+      expect(output).to include("12\n")
+      expect(output).not_to include("A1B")
+    end
+  end
+
   it "does not overwrite an existing runtime log when recording finds no specs" do
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "tmp"))
