@@ -107,6 +107,12 @@ RSpec.describe ParallelSpecs::Test::Runner do
 
       expect(files).to eq(%w[spec/models/user_spec.rb])
     end
+
+    it "rejects explicit file inputs that do not exist" do
+      expect do
+        described_class.tests_in_groups(%w[spec/missing_spec.rb], 1)
+      end.to raise_error(ParallelSpecs::Test::Runner::MissingTestFileError, "No such spec file or directory: spec/missing_spec.rb")
+    end
   end
 
   describe ".print_command" do

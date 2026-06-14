@@ -29,6 +29,8 @@ module ParallelSpecs
       abort "Process count must be greater than 0" unless num_processes.positive?
 
       run_tests_in_parallel(num_processes, options)
+    rescue ParallelSpecs::Test::Runner::MissingTestFileError => e
+      abort e.message
     end
 
     private

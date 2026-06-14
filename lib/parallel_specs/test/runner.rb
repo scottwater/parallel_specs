@@ -8,6 +8,7 @@ module ParallelSpecs
     class Runner
       RuntimeLogTooSmallError = Class.new(StandardError)
       RuntimeLogParseError = Class.new(StandardError)
+      MissingTestFileError = Class.new(ArgumentError)
 
       class << self
         def tests_in_groups(tests, num_groups, options = {})
@@ -183,8 +184,10 @@ module ParallelSpecs
           tests.flat_map do |file_or_folder|
             if File.directory?(file_or_folder)
               filter_files(Dir[File.join(file_or_folder, "**/*_spec.rb")].uniq.sort, options)
-            else
+            elsif File.exist?(file_or_folder)
               filter_files([file_or_folder], options)
+            else
+              raise MissingTestFileError, "No such spec file or directory: #{file_or_folder}"
             end
           end.uniq
         end

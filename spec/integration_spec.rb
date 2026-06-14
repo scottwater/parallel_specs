@@ -47,6 +47,17 @@ RSpec.describe "parallel_specs integration" do
     [first_chunk, output, $?]
   end
 
+  it "reports a missing explicit spec path without a backtrace" do
+    Dir.mktmpdir do |dir|
+      output, status = run_specs(dir, "-n", "1", "spec/missing_spec.rb")
+
+      expect(status.exitstatus).to eq(1), output
+      expect(output).to include("No such spec file or directory: spec/missing_spec.rb")
+      expect(output).not_to include("test/runner.rb")
+      expect(output).not_to include("Errno::ENOENT")
+    end
+  end
+
   it "prints a plain dashboard summary in non-tty mode" do
     Dir.mktmpdir do |dir|
       write(dir, "spec/a_spec.rb", "RSpec.describe { it('passes') { expect(true).to eq(true) } }")
