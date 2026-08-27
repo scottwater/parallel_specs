@@ -13,7 +13,7 @@ module ParallelSpecs
 
       class << self
         def tests_in_groups(tests, num_groups, options = {})
-          ParallelSpecs::Grouper.in_even_groups_by_size(tests_with_size(tests, options), num_groups)
+          ParallelSpecs::Grouper.in_even_groups_by_size(tests_with_size(tests, options), num_groups, options)
         end
 
         def tests_with_size(tests, options)

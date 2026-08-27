@@ -4,6 +4,30 @@ require "spec_helper"
 require "parallel_specs/test/runner"
 
 RSpec.describe ParallelSpecs::Test::Runner do
+  describe ".tests_in_groups" do
+    around { |example| use_temporary_directory(&example) }
+
+    it "passes single-process isolation options to the grouper" do
+      FileUtils.mkdir_p("spec/features")
+      FileUtils.mkdir_p("spec/models")
+      File.write("spec/features/a_spec.rb", "x")
+      File.write("spec/features/b_spec.rb", "x")
+      File.write("spec/models/a_spec.rb", "x")
+      File.write("spec/models/b_spec.rb", "x")
+
+      groups = described_class.tests_in_groups(
+        ["spec"],
+        3,
+        group_by: :filesize,
+        single_process: [/spec\/features/],
+        isolate: true
+      )
+
+      expect(groups[0]).to eq(%w[spec/features/a_spec.rb spec/features/b_spec.rb])
+      expect(groups.drop(1).flatten).to contain_exactly("spec/models/a_spec.rb", "spec/models/b_spec.rb")
+    end
+  end
+
   describe ".execute_command" do
     def call(*args)
       ParallelSpecs.with_pid_file { described_class.execute_command(*args) }
