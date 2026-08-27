@@ -133,6 +133,49 @@ RSpec.describe "parallel_specs integration" do
     end
   end
 
+  it "runs singled specs on an otherwise dedicated worker" do
+    Dir.mktmpdir do |dir|
+      write(dir, "spec/features/a_spec.rb", <<~RUBY)
+        RSpec.describe('feature a') do
+          it('records its worker') do
+            File.write('feature-a.worker', ENV.fetch('TEST_ENV_NUMBER'))
+          end
+        end
+      RUBY
+      write(dir, "spec/features/b_spec.rb", <<~RUBY)
+        RSpec.describe('feature b') do
+          it('records its worker') do
+            File.write('feature-b.worker', ENV.fetch('TEST_ENV_NUMBER'))
+          end
+        end
+      RUBY
+      write(dir, "spec/models/a_spec.rb", <<~RUBY)
+        RSpec.describe('model a') do
+          it('records its worker') do
+            File.write('model-a.worker', ENV.fetch('TEST_ENV_NUMBER'))
+          end
+        end
+      RUBY
+      write(dir, "spec/models/b_spec.rb", <<~RUBY)
+        RSpec.describe('model b') do
+          it('records its worker') do
+            File.write('model-b.worker', ENV.fetch('TEST_ENV_NUMBER'))
+          end
+        end
+      RUBY
+
+      output, status = run_specs(dir, "-n", "3", "--single", "spec/features", "--isolate", "spec")
+
+      expect(status.exitstatus).to eq(0), output
+      expect(File.read(File.join(dir, "feature-a.worker"))).to eq("")
+      expect(File.read(File.join(dir, "feature-b.worker"))).to eq("")
+      expect([
+        File.read(File.join(dir, "model-a.worker")),
+        File.read(File.join(dir, "model-b.worker"))
+      ].sort).to eq(%w[2 3])
+    end
+  end
+
   it "uses PARALLEL_SPECS_PROCESSORS for the worker count" do
     Dir.mktmpdir do |dir|
       write(dir, "spec/a_spec.rb", "RSpec.describe { it('passes') { expect(true).to eq(true) } }")

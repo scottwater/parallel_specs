@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `--single`, `--isolate`, and `--isolate-n` grouping controls for keeping
+  matching specs together on dedicated workers.
+
 ### Changed
 - `--record-runtime` now renders the normal dashboard (interactive on a TTY,
   plain in CI) instead of falling back to RSpec's `progress` formatter, so

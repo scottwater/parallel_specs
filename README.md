@@ -71,6 +71,22 @@ bundle exec parallel_specs --record-runtime --runtime-log tmp/my_runtime.log
 
 `--runtime-log PATH` is used as the input path for balancing and, with `--record-runtime`, as the output destination for the completed run.
 
+## Keeping specs on dedicated workers
+
+Use `--single` with `--isolate` to keep matching specs together on a dedicated worker. For example, on a 16-worker run:
+
+```bash
+bundle exec parallel_specs -n 16 --single spec/features --isolate
+```
+
+All files matching `spec/features` run sequentially on worker 1, while workers 2–16 handle the remaining specs. If `--isolate` is omitted, runtime balancing can add ordinary specs to the worker running the singled specs.
+
+`--single` is repeatable when more than one pattern should use the singled worker. To spread singled specs across two dedicated workers instead, use `--isolate-n 2`:
+
+```bash
+bundle exec parallel_specs -n 16 --single spec/features --isolate-n 2
+```
+
 ## Rails database tasks
 
 Rails apps that use `TEST_ENV_NUMBER` in `config/database.yml` can prepare per-worker test databases without depending on `parallel_tests`.

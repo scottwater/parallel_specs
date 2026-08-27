@@ -344,6 +344,13 @@ module ParallelSpecs
           runtime - info from runtime log
           default - runtime when runtime log is filled otherwise filesize
         TEXT
+        opts.on("-s PATTERN", "--single PATTERN", "Run all matching spec files in the same process") do |pattern|
+          (options[:single_process] ||= []) << Regexp.new(pattern)
+        end
+        opts.on("-i", "--isolate", "Do not run other specs in workers reserved by --single") { options[:isolate] = true }
+        opts.on("--isolate-n PROCESSES", Integer, "Spread --single specs across this many isolated workers") do |count|
+          options[:isolate_count] = count
+        end
         opts.on("--dashboard-mode MODE", %w[interactive plain], "Dashboard mode: interactive or plain") { |mode| options[:dashboard_mode] = mode.to_sym }
         opts.on("--plain-dashboard", "Use the plain text dashboard output") { options[:dashboard_mode] = :plain }
         opts.on("--plain", "Use the plain text dashboard output") { options[:dashboard_mode] = :plain }

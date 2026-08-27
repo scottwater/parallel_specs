@@ -29,6 +29,18 @@ RSpec.describe ParallelSpecs::CLI do
       expect(call(["--record-runtime"])).to include(record_runtime: true, dashboard: true)
     end
 
+    it "parses single-process and isolation options" do
+      options = call([
+        "--single", "spec/features",
+        "-s", "spec/system",
+        "--isolate",
+        "--isolate-n", "2"
+      ])
+
+      expect(options[:single_process].map(&:source)).to eq(%w[spec/features spec/system])
+      expect(options).to include(isolate: true, isolate_count: 2)
+    end
+
     it "parses file include and exclude patterns" do
       options = call(["spec", "--pattern", "models|services", "--exclude-pattern", "slow"])
 
