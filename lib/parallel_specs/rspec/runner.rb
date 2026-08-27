@@ -114,7 +114,7 @@ module ParallelSpecs
             options[:runtime_log] || runtime_log
           end
 
-          ["--format", "progress", "--format", "ParallelSpecs::RSpec::RuntimeLogger", "--out", runtime_log_path]
+          ["--format", "ParallelSpecs::RSpec::RuntimeLogger", "--out", runtime_log_path]
         end
       end
     end

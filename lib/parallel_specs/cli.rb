@@ -364,8 +364,6 @@ module ParallelSpecs
         }
       end.parse!(cli_argv)
 
-      options[:dashboard] = !options[:record_runtime]
-
       files, remaining = extract_file_paths(cli_argv, rspec_argv)
       files = [@runner.default_test_folder] if files.empty?
       options[:files] = files.map { |file_path| Pathname.new(file_path).cleanpath.to_s }

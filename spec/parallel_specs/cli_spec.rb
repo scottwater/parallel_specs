@@ -25,8 +25,8 @@ RSpec.describe ParallelSpecs::CLI do
       )
     end
 
-    it "switches to runtime recording mode" do
-      expect(call(["--record-runtime"])).to include(record_runtime: true, dashboard: false)
+    it "switches to runtime recording mode while keeping the dashboard" do
+      expect(call(["--record-runtime"])).to include(record_runtime: true, dashboard: true)
     end
 
     it "parses file include and exclude patterns" do

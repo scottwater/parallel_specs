@@ -197,7 +197,7 @@ RSpec.describe "parallel_specs integration" do
     end
   end
 
-  it "prints each record-runtime worker output without interleaving chunks" do
+  it "captures worker output instead of spraying it while recording runtime" do
     Dir.mktmpdir do |dir|
       write(dir, "spec/a_spec.rb", "x")
       write(dir, "spec/b_spec.rb", "yy")
@@ -225,9 +225,13 @@ RSpec.describe "parallel_specs integration" do
       output, status = run_specs(dir, "--record-runtime", "--runtime-log", "tmp/custom_runtime.log", "-n", "2", "spec")
 
       expect(status.exitstatus).to eq(0), output
-      expect(output).to include("AB\n")
-      expect(output).to include("12\n")
-      expect(output).not_to include("A1B")
+      # Recording now runs through the dashboard, so raw worker output is
+      # captured rather than printed on a successful run.
+      expect(output).not_to include("AB")
+      expect(output).not_to include("12")
+      runtime_log = File.read(File.join(dir, "tmp/custom_runtime.log"))
+      expect(runtime_log).to include("spec/a_spec.rb:0.1")
+      expect(runtime_log).to include("spec/b_spec.rb:0.1")
     end
   end
 

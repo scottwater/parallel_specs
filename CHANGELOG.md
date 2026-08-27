@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- `--record-runtime` now renders the normal dashboard (interactive on a TTY,
+  plain in CI) instead of falling back to RSpec's `progress` formatter, so
+  recording a runtime log no longer sprays per-example dots across the screen.
+  Worker output is captured and shown only on failure, matching ordinary runs.
+
 ## [0.9.1] - 2026-06-14
 
 ### Added

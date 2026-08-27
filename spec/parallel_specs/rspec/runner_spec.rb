@@ -4,7 +4,7 @@ require "spec_helper"
 require "parallel_specs/rspec/runner"
 
 runtime_formatter_args = lambda do |path|
-  ["--format", "progress", "--format", "ParallelSpecs::RSpec::RuntimeLogger", "--out", path]
+  ["--format", "ParallelSpecs::RSpec::RuntimeLogger", "--out", path]
 end
 
 RSpec.describe ParallelSpecs::RSpec::Runner do
