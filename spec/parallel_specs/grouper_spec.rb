@@ -35,6 +35,7 @@ RSpec.describe ParallelSpecs::Grouper do
   it "spreads singled files across the requested dedicated workers" do
     groups = described_class.in_even_groups_by_size(items, 4, single_process: [/spec\/features/], isolate_count: 2)
 
+    expect(groups.first(2)).to all(satisfy { |group| !group.empty? })
     expect(groups.first(2).flatten).to contain_exactly("spec/features/a_spec.rb", "spec/features/b_spec.rb")
     expect(groups.first(2).flatten).to all(match(%r{\Aspec/features/}))
     expect(groups.drop(2).flatten).to contain_exactly(
