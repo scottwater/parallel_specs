@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-08-27
+
 ### Added
 - `--single`, `--isolate`, and `--isolate-n` grouping controls for keeping
   matching specs together on dedicated workers.
@@ -52,5 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release.
 
+[Unreleased]: https://github.com/scottwater/parallel_specs/compare/0.92...HEAD
+[0.9.2]: https://github.com/scottwater/parallel_specs/compare/0.91...0.92
 [0.9.1]: https://github.com/scottwater/parallel_specs/compare/0.9.0...0.91
 [0.9.0]: https://github.com/scottwater/parallel_specs/releases/tag/0.9.0
